@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,8 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.Sonar;
 import xyz.jonesdev.sonar.api.config.SonarConfiguration;
-import xyz.jonesdev.sonar.api.logger.LoggerWrapper;
+import xyz.jonesdev.sonar.api.fallback.captcha.CaptchaGenerator;
+import xyz.jonesdev.sonar.api.fallback.ratelimit.Ratelimiter;
 
 import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,30 +43,15 @@ public final class Fallback {
   private final ConcurrentMap<InetAddress, Byte> connected = new ConcurrentHashMap<>(128);
   // Cache of all blacklisted IP addresses to ensure each entry can expire after the given time
   @Setter
-  private Cache<InetAddress, Byte> blacklist;
+  private Cache<String, Integer> blacklist;
   @Setter
   private long blacklistTime;
+  @Setter
+  private CaptchaGenerator captchaGenerator;
 
   private final @NotNull FallbackQueue queue = new FallbackQueue();
-  private final @NotNull FallbackRatelimiter ratelimiter = new FallbackRatelimiter();
-
-  private final LoggerWrapper logger = new LoggerWrapper() {
-
-    @Override
-    public void info(final String message, final Object... args) {
-      Sonar.get().getLogger().info("[fallback] " + message, args);
-    }
-
-    @Override
-    public void warn(final String message, final Object... args) {
-      Sonar.get().getLogger().warn("[fallback] " + message, args);
-    }
-
-    @Override
-    public void error(final String message, final Object... args) {
-      Sonar.get().getLogger().error("[fallback] " + message, args);
-    }
-  };
+  @Setter
+  private Ratelimiter<InetAddress> ratelimiter;
 
   public boolean shouldVerifyNewPlayers() {
     return shouldPerform(Sonar.get().getConfig().getVerification().getTiming());
@@ -73,10 +59,6 @@ public final class Fallback {
 
   public boolean shouldPerformCaptcha() {
     return shouldPerform(Sonar.get().getConfig().getVerification().getMap().getTiming());
-  }
-
-  public boolean shouldPerformVehicleCheck() {
-    return shouldPerform(Sonar.get().getConfig().getVerification().getVehicle().getTiming());
   }
 
   private static boolean shouldPerform(final SonarConfiguration.Verification.Timing timing) {

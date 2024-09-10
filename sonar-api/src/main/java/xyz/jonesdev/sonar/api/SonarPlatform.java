@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,24 @@
 
 package xyz.jonesdev.sonar.api;
 
+import io.netty.channel.ChannelPipeline;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import java.util.function.Function;
 
 @Getter
 @RequiredArgsConstructor
 public enum SonarPlatform {
-  BUKKIT("Bukkit", 19110),
-  BUNGEE("BungeeCord", 19109),
-  VELOCITY("Velocity", 19107);
+  BUKKIT("Bukkit", 19110, "packet_handler",
+    pipeline -> pipeline.context("outbound_config") != null ? "outbound_config" : "encoder"),
+  BUNGEE("BungeeCord", 19109, "inbound-boss",
+    pipeline -> "packet-encoder"),
+  VELOCITY("Velocity", 19107, "handler",
+    pipeline -> "minecraft-encoder");
 
   private final String displayName;
-  /**
-   * bStats service ID for the respective Sonar platform
-   */
   private final int metricsId;
+  private final String connectionHandler;
+  private final Function<ChannelPipeline, String> encoder;
 }

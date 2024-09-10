@@ -10,7 +10,8 @@
 #
 # Besoin d'aide ou d'autres questions ? https://jonesdev.xyz/discord
 # Code source : https://github.com/jonesdevelopment/sonar
-# Droit d'auteur Jones Development, un contributeur Sonar, licence sous GPL-3.0
+# Documentation: https://docs.jonesdev.xyz/administration/configuring-sonar
+# Copyright Jones Development and Sonar Contributors, licence sous GPL-3.0
 #
 
 # Paramètre général de Sonar
@@ -80,26 +81,26 @@ verification:
     gravity:
       # Sonar devrait-il vérifier la gravité du client ? (Recommandé)
       enabled: true
-      # Sonar devrait-il vérifier si le joueur entre en collision avec des blocs ? (Recommandé)
-      check-collisions: true
       # Sonar devrait-il faire résoudre un CAPTCHA au joueur s'il échoue à la vérification de la gravité ?
       captcha-on-fail: false
       # Nombre maximum de ticks que le joueur a pour tomber avant de pouvoir toucher la plateforme
       max-movement-ticks: 8
-      # Le mode de jeu du joueur pendant la vérification
-      # Types possibles : SURVIVAL, CREATIVE, ADVENTURE
-      # - SURVIVAL : tous les composants de l'interface utilisateur sont visibles
-      # - CREATIVE : la santé et la faim sont cachées
-      # - ADVENTURE : tous les composants de l'interface utilisateur sont visibles
-      gamemode: ADVENTURE
+
+    # Vérifie si le joueur entre en collision avec les blocs apparus en dessous de lui
+    collision:
+      # Sonar devrait-il vérifier si le joueur entre en collision avec des blocs ? (Recommandé)
+      enabled: true
+      # Quel type de bloc Sonar doit-il utiliser pour la plate-forme de collision ?
+      # Types possibles : STONE, BARRIER, TRAPDOOR, ENCHANTMENT_TABLE
+      # Vous ne devriez modifier cela que si vous savez ce que vous faites
+      collision-block-type: TRAPDOOR
 
     # Vérifie si le client envoie les paquets appropriés lorsqu'il monte dans un véhicule
     vehicle:
-      # Types possibles : ALWAYS, DURING_ATTACK, NEVER
-      # - ALWAYS : Les nouveaux joueurs seront toujours montés dans un véhicule (Recommandé)
-      # - DURING_ATTACK : Les nouveaux joueurs ne seront montés dans un véhicule que pendant une attaque
-      # - NEVER : Les nouveaux joueurs ne seront jamais montés dans un véhicule
-      timing: ALWAYS
+      # Sonar devrait-il vérifier si le joueur entre correctement dans un bateau ?
+      enabled: true
+      # Nombre minimum de paquets envoyés par le client
+      minimum-packets: 2
 
     # Fait taper au joueur un code à partir d'une carte virtuelle dans le chat
     map-captcha:
@@ -109,40 +110,10 @@ verification:
       # - DURING_ATTACK : Les nouveaux joueurs ne recevront un CAPTCHA que pendant une attaque
       # - NEVER : Les nouveaux joueurs ne recevront jamais de CAPTCHA (Recommandé)
       timing: NEVER
-      # Options pour les effets sur l'image montrée au joueur
-      # Vous ne devriez modifier cela que si vous savez ce que vous faites
-      effects:
-        # Ajoute des lignes aléatoires à l'image
-        scratches: true
-        # Applique un filtre d'ondulation (effet ondulé)
-        ripple: true
-        # Applique un filtre de bosse (texte accentué)
-        bump: true
-        # Filtre de distorsion
-        distortion:
-          # Sonar devrait-il appliquer un filtre de distorsion ?
-          enabled: true
-          # Quelle forme Sonar devrait-il utiliser pour le filtre de distorsion ?
-          # Types possibles : 0, 1, 2, 3
-          # - 0 : Croix
-          # - 1 : Lignes
-          # - 2 : Cercles
-          # - 3 : Carrés
-          shape: 2
-          # Distance entre les pixels/objets déformés
-          distance: 5
-          # Densité des pixels/objets déformés
-          density: 0.1
-          # Quantité de mélange entre les couleurs des objets
-          mix: 0.15
       # Chemin vers l'image d'arrière-plan que Sonar utilise pour le CAPTCHA
       # Si l'image n'est pas trouvée, un bruit sera utilisé comme arrière-plan par défaut
       # Vous pouvez simplement mettre le nom du fichier ici si le fichier est dans le répertoire du plugin
       background: ''
-      # Sonar devrait-il détecter automatiquement la couleur de fond ?
-      # Cela est fait pour créer un contraste entre l'image d'arrière-plan et le texte
-      # Si cela est désactivé, Sonar utilisera un dégradé aléatoire pour les couleurs
-      auto-color: false
       # Combien de réponses Sonar devrait-il préparer ?
       # Cette tâche se déroule de manière asynchrone en arrière-plan
       precompute: 500
@@ -153,7 +124,7 @@ verification:
       max-tries: 3
       # Caractères (lettres et chiffres) autorisés à apparaître dans la réponse au CAPTCHA
       # Il n'est pas recommandé d'ajouter des chiffres ou des lettres qui pourraient se ressembler
-      dictionary: '1235689'
+      alphabet: 'abcdefhjkmnoprstuxyz'
 
     # Vérifie si le joueur envoie une marque client valide au serveur
     client-brand:
@@ -168,21 +139,22 @@ verification:
     valid-name-regex: ^[a-zA-Z0-9_]+$
     # Regex pour valider la locale client lors de la vérification
     valid-locale-regex: ^[a-zA-Z_]+$
-    # Le ping qu'un joueur doit avoir pour dépasser le délai d'attente
-    # (Cette valeur représente le temps en millisecondes : 1 seconde = 1000 millisecondes)
-    max-ping: 10000
     # Nombre maximal de paquets de connexion que le joueur doit envoyer pour être expulsé
     max-login-packets: 256
 
   # S'il est activé, le joueur sera renvoyé au serveur d'origine
   # après avoir passé avec succès la vérification du bot.
   # Cette fonctionnalité a été introduite par Mojang dans la version Minecraft 1.20.5
+  # Tutoriel: https://youtu.be/aSWrzQVjGnc?t=71
   transfer:
     # Sonar devrait-il transférer le joueur au serveur d'origine (au lieu de l'expulser) ?
     # Pour que cela fonctionne, vous devez activer la fonctionnalité dans la configuration de votre serveur
     # De plus, vous voudrez peut-être réduire la quantité de limitation de débit de connexion
     # effectuée par Velocity ou d'autres proxys/plugins, car cela pourrait empêcher le
     # joueur d'être transféré correctement.
+    # Si votre serveur permet aux joueurs de Bedrock de s'inscrire via Geyser, assurez-vous de configurer
+    # TransferTool pour Geyser, afin que les joueurs Bedrock soient redirigés vers le bon serveur.
+    # https://github.com/onebeastchris/TransferTool
     enabled: false
     # Quel serveur Sonar devrait-il utiliser pour transférer le joueur une fois la vérification réussie ?
     # Veuillez entrer l'adresse IP du serveur que les joueurs utilisent normalement pour se connecter à votre serveur.
@@ -192,6 +164,16 @@ verification:
     # Si votre serveur n'a pas besoin d'un port pour se connecter, vous pouvez laisser celui-ci comme 25565.
     destination-port: 25565
 
+  # Le mode de jeu du joueur pendant la vérification
+  # Types possibles : SURVIVAL, CREATIVE, ADVENTURE
+  # - SURVIVAL : tous les composants de l'interface utilisateur sont visibles
+  # - CREATIVE : la santé et la faim sont cachées
+  # - ADVENTURE : tous les composants de l'interface utilisateur sont visibles
+  gamemode: ADVENTURE
+  # Sonar met en cache la plupart des paquets qu'il envoie au client, y compris le paquet LoginSuccess.
+  # Quel nom d'utilisateur Sonar doit-il utiliser pour le paquet LoginSuccess ?
+  # Le nom d'utilisateur ne sera pas visible par le joueur sans modification du client
+  cached-username: "Sonar"
   # Sonar devrait-il journaliser les nouvelles tentatives de vérification ?
   log-connections: true
   # Sonar devrait-il journaliser les nouvelles tentatives de vérification pendant les attaques ?
@@ -221,10 +203,8 @@ verification:
   # Combien de fois un joueur doit-il échouer à la vérification pour être placé sur liste noire ?
   # (Réglez cette valeur à 0 pour désactiver la liste noire entièrement)
   blacklist-threshold: 2
-  # Liste des identifiants de protocole qui ne sont pas vérifiés par Sonar (bypass de vérification)
+  # Liste des identifiants de protocole qui ne peuvent pas du tout rejoindre le serveur
   # Vous pouvez trouver la liste complète de tous les identifiants de protocole ici :
   # https://wiki.vg/Protocol_version_numbers
   # Par exemple, Minecraft 1.20 a l'ID 763.
-  whitelisted-protocols: []
-  # Liste des identifiants de protocole qui ne peuvent pas du tout rejoindre le serveur
   blacklisted-protocols: []

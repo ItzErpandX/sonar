@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,14 @@
 
 package xyz.jonesdev.sonar.api.event.impl;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import xyz.jonesdev.sonar.api.attack.AttackTracker;
 import xyz.jonesdev.sonar.api.event.SonarEvent;
+import xyz.jonesdev.sonar.api.tracker.AttackTracker;
 
 @Getter
 @ToString
-@EqualsAndHashCode
 @RequiredArgsConstructor
 public final class AttackMitigatedEvent implements SonarEvent {
   private final AttackTracker.AttackStatistics attackStatistics;

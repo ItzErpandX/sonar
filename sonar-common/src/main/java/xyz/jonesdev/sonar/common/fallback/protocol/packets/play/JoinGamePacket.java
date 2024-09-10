@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.*;
 import static xyz.jonesdev.sonar.common.fallback.protocol.dimension.DimensionRegistry.*;
 import static xyz.jonesdev.sonar.common.util.ProtocolUtil.*;
 
-// Mostly taken from
 // https://github.com/Nan1t/NanoLimbo/blob/main/src/main/java/ua/nanit/limbo/protocol/packets/play/PacketJoinGame.java
 @Data
 @NoArgsConstructor
@@ -105,7 +104,7 @@ public final class JoinGamePacket implements FallbackPacket {
       byteBuf.writeByte(gamemode);
       byteBuf.writeByte(-1); // previous gamemode
       writeStringArray(byteBuf, levelNames);
-      writeCompoundTag(byteBuf, OLD_CODEC);
+      writeCompoundTag(byteBuf, CODEC_1_16);
       writeString(byteBuf, DEFAULT_DIMENSION_1_16.getIdentifier());
       writeString(byteBuf, levelName);
       byteBuf.writeLong(partialHashedSeed);
@@ -123,7 +122,7 @@ public final class JoinGamePacket implements FallbackPacket {
       byteBuf.writeByte(gamemode);
       byteBuf.writeByte(-1); // previous gamemode
       writeStringArray(byteBuf, levelNames);
-      writeCompoundTag(byteBuf, CODEC_1_16);
+      writeCompoundTag(byteBuf, CODEC_1_16_2);
       writeCompoundTag(byteBuf, DEFAULT_DIMENSION_1_16.getTag());
       writeString(byteBuf, levelName);
       byteBuf.writeLong(partialHashedSeed);

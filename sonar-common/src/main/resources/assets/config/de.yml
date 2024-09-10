@@ -10,7 +10,8 @@
 #
 # Brauchst du Hilfe? https://jonesdev.xyz/discord
 # Source code: https://github.com/jonesdevelopment/sonar
-# Copyright Jones Development and Sonar Contributors, licensed under GPL-3.0
+# Dokumentation: https://docs.jonesdev.xyz/administration/configuring-sonar
+# Copyright Jones Development and Sonar Contributors, lizenziert unter GPL-3.0
 #
 
 # Generelle Einstellungen für Sonar
@@ -78,26 +79,26 @@ verification:
     gravity:
       # Soll Sonar auf gültige Client-Gravitation prüfen? (Empfohlen)
       enabled: true
-      # Soll Sonar prüfen, ob der Spieler mit Blöcken kollidiert? (Empfohlen)
-      check-collisions: true
       # Soll Sonar den Spieler dazu bringen, ein CAPTCHA zu lösen, wenn er die Schwerkraftprüfung nicht besteht?
       captcha-on-fail: false
       # Maximale Anzahl an Ticks, die der Spieler fallen muss, um die Plattform erreichen zu dürfen
       max-movement-ticks: 8
-      # Der Spielmodus des Spielers während der Überprüfung
-      # Mögliche Typen: SURVIVAL, CREATIVE, ADVENTURE
-      # - SURVIVAL: alle UI-Komponenten sind sichtbar
-      # - CREATIVE: Gesundheit und Hunger sind versteckt
-      # - ADVENTURE: alle UI-Komponenten sind sichtbar
-      gamemode: ADVENTURE
+
+    # Prüft, ob der Spieler mit Blöcken kollidiert, die unter ihm gespawnt sind
+    collision:
+      # Soll Sonar prüfen, ob der Spieler mit Blöcken kollidiert? (Empfohlen)
+      enabled: true
+      # Welche Art von Block sollte Sonar für die Kollisionsplattform verwenden?
+      # Mögliche Typen: STONE, BARRIER, TRAPDOOR, ENCHANTMENT_TABLE
+      # Sie sollten dies nur bearbeiten, wenn Sie wissen, was Sie tun
+      collision-block-type: TRAPDOOR
 
     # Überprüft, ob der Spieler beim Einsteigen in ein Boot die richtigen Pakete sendet
     vehicle:
-      # Mögliche Typen: ALWAYS, DURING_ATTACK, NEVER
-      # - ALWAYS: Neue Spieler werden immer auf einem Fahrzeug montiert (Empfohlen)
-      # - DURING_ATTACK: Neue Spieler werden nur während eines Angriffs auf ein Fahrzeug gesetzt
-      # - NEVER: Neue Spieler werden niemals in ein Fahrzeug eingebaut
-      timing: ALWAYS
+      # Sollte Sonar prüfen, ob der Spieler richtig in ein Fahrzeug einsteigt?
+      enabled: true
+      # Mindestanzahl der vom Client gesendeten Pakete
+      minimum-packets: 2
 
     # Lässt den Spieler einen Code von einer virtuellen Karte im Chat eingeben
     map-captcha:
@@ -107,40 +108,10 @@ verification:
       # - DURING_ATTACK: Neue Spieler erhalten nur während eines Angriffs ein CAPTCHA
       # - NEVER: Neue Spieler erhalten nie ein CAPTCHA (Empfohlen)
       timing: NEVER
-      # Optionen für die Effekte auf dem angezeigten Bild
-      # Sie sollten dies nur bearbeiten, wenn Sie wissen, was Sie tun
-      effects:
-        # Fügt dem Bild zufällige Linien hinzu
-        scratches: true
-        # Wendet einen Ripple-Filter an (Welleneffekt)
-        ripple: true
-        # Wendet einen Bump-Filter an (geschärfter Text)
-        bump: true
-        # Verzerrungsfilter
-        distortion:
-          # Sollte Sonar einen Verzerrungsfilter anwenden?
-          enabled: true
-          # Welche Form sollte Sonar für den Verzerrungsfilter verwenden?
-          # Mögliche Typen: 0, 1, 2, 3
-          # - 0: Kreuze
-          # - 1: Linien
-          # - 2: Kreise
-          # - 3: Quadrate
-          shape: 2
-          # Abstand zwischen verzerrten Pixeln/Objekten
-          distance: 5
-          # Dichte der verzerrten Pixel/Objekte
-          density: 0.1
-          # Ausmaß der Vermischung zwischen den Farben von Objekten
-          mix: 0.15
       # Pfad zum Hintergrundbild, das Sonar für das CAPTCHA verwendet
       # Wenn das Bild nicht gefunden wird, wird ein Rauschen als Standardhintergrund verwendet
       # Sie können hier einfach den Namen der Datei eingeben, wenn sich die Datei im Plugin-Verzeichnis befindet
       background: ''
-      # Sollte Sonar die Hintergrundfarbe automatisch erkennen?
-      # Dies geschieht, um einen Kontrast zwischen dem Hintergrundbild und dem Text zu erzeugen
-      # Wenn dies deaktiviert ist, verwendet Sonar einen zufälligen Farbverlauf für die Farben
-      auto-color: false
       # Wie viele Antworten soll Sonar vorbereiten?
       # Dieser Vorgang erfolgt asynchron im Hintergrund
       precompute: 500
@@ -151,7 +122,7 @@ verification:
       max-tries: 3
       # Zeichen (Buchstaben und Zahlen), die im Antwort-CAPTCHA erscheinen dürfen
       # Es wird nicht empfohlen, Zahlen oder Buchstaben hinzuzufügen, die einander ähneln könnten
-      dictionary: '1235689'
+      alphabet: 'abcdefhjkmnoprstuxyz'
 
     # Überprüft, ob die Spieler eine gültige Client-Marke an den Server senden
     client-brand:
@@ -166,21 +137,22 @@ verification:
     valid-name-regex: ^[a-zA-Z0-9_]+$
     # Regex zur Validierung der Client-Spracheinstellung während der Überprüfung
     valid-locale-regex: ^[a-zA-Z_]+$
-    # Ping, den ein Spieler haben muss, um ein Timeout zu erleiden
-    # (Dieser Wert stellt die Zeit in Millisekunden dar: 1 Sekunde = 1000 Millisekunden)
-    max-ping: 10000
     # Maximale Anzahl an Login-Paketen, die der Spieler senden muss, um gekickt zu werden
     max-login-packets: 256
 
-  # Wenn aktiviert, wird der Player zurück zum Ursprungsserver gesendet
+  # Wenn aktiviert, wird der Player zurück zum Ursprungsserver gesendet,
   # falls dieser die der Bot-Verifizierung erfolgreich besteht.
   # Diese Funktion wurde von Mojang in Minecraft Version 1.20.5 eingeführt
+  # Anleitung: https://youtu.be/aSWrzQVjGnc?t=71
   transfer:
     # Sollte Sonar den Spieler auf den Ursprungsserver senden (anstatt ihn zu kicken)?
-    # Damit dies funktioniert, müssen Sie die Funktion in der Konfiguration Ihres Servers aktivieren
+    # Damit dies funktioniert, müssen Sie die Funktion in der Konfiguration Ihres Servers aktivieren.
     # Darüber hinaus möchten Sie möglicherweise die Begrenzung der Anmelderate reduzieren
     # wird von Velocity oder anderen Proxys/Plugins durchgeführt, da dies das verhindern könnte
     # Spieler konnte nicht korrekt übertragen werden.
+    # Wenn Ihr Server es erlaubt, dass Bedrock-Spieler über Geyser beitreten können, stellen Sie sicher, dass Sie das
+    # TransferTool für Geyser einrichten, damit Bedrock-Spieler auf den richtigen Server umgeleitet werden.
+    # https://github.com/onebeastchris/TransferTool
     enabled: false
     # Auf welchen Server soll Sonar den Spieler übertragen, wenn die Verifizierung bestanden wurde?
     # Bitte geben Sie die Server-IP ein, die von Spielern verwendet wird, um sich zu verbinden.
@@ -190,6 +162,16 @@ verification:
     # Wenn Ihr Server keinen Port zum Herstellen einer Verbindung benötigt, können Sie diesen auf 25565 belassen.
     destination-port: 25565
 
+  # Der Spielmodus des Spielers während der Überprüfung
+  # Mögliche Typen: SURVIVAL, CREATIVE, ADVENTURE
+  # - SURVIVAL: alle UI-Komponenten sind sichtbar
+  # - CREATIVE: Gesundheit und Hunger sind versteckt
+  # - ADVENTURE: alle UI-Komponenten sind sichtbar
+  gamemode: ADVENTURE
+  # Sonar speichert die meisten Pakete, die es an den Client sendet, einschließlich des LoginSuccess-Pakets.
+  # Welchen Benutzernamen soll Sonar für das LoginSuccess-Paket verwenden?
+  # Der Benutzername ist für den Spieler ohne Änderungen am Client nicht sichtbar
+  cached-username: "Sonar"
   # Soll Sonar neue Überprüfungsversuche protokollieren?
   log-connections: true
   # Soll Sonar neue Überprüfungsversuche während Angriffen protokollieren?
@@ -219,10 +201,8 @@ verification:
   # Wie oft muss ein Spieler die Überprüfung nicht bestehen, um auf die Schwarze Liste gesetzt zu werden?
   # (Setzen Sie diesen Wert auf 0, um die Schwarze Liste vollständig zu deaktivieren)
   blacklist-threshold: 2
-  # Liste von Protokoll-IDs, die von Sonar nicht überprüft werden (Überprüfungsumgehung)
+  # Liste von Protokoll-IDs, die den Server überhaupt nicht betreten dürfen
   # Die vollständige Liste aller Protokoll-IDs finden Sie hier:
   # https://wiki.vg/Protocol_version_numbers
   # Zum Beispiel hat Minecraft 1.20 die ID 763.
-  whitelisted-protocols: []
-  # Liste von Protokoll-IDs, die den Server überhaupt nicht betreten dürfen
   blacklisted-protocols: []

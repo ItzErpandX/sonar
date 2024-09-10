@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,14 +32,13 @@ public final class MapCaptchaInfo {
   private final FallbackPacket[] legacy;
   private final FallbackPacket modern;
 
-  public MapCaptchaInfo(final @NotNull String answer, final int @NotNull [] buffer) {
+  public MapCaptchaInfo(final @NotNull String answer, final byte @NotNull [] buffer) {
     this.answer = answer;
 
     // Prepare 1.7 map data using a grid
-    final int[][] grid = new int[128][128];
+    final byte[][] grid = new byte[128][128];
     for (int i = 0; i < buffer.length; i++) {
-      final int buf = buffer[i];
-      grid[i & Byte.MAX_VALUE][i >> 7] = buf;
+      grid[i & Byte.MAX_VALUE][i >> 7] = buffer[i];
     }
     this.legacy = new FallbackPacket[grid.length];
     for (int i = 0; i < grid.length; i++) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,18 +24,15 @@ import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacketDecoder;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.*;
 
-import java.util.UUID;
-
-import static xyz.jonesdev.sonar.api.config.SonarConfiguration.Verification.Gravity.Gamemode.CREATIVE;
+import static xyz.jonesdev.sonar.api.config.SonarConfiguration.Verification.Gamemode.CREATIVE;
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.*;
 import static xyz.jonesdev.sonar.common.fallback.protocol.FallbackPreparer.*;
 
 public final class FallbackGravitySessionHandler extends FallbackSessionHandler {
 
   public FallbackGravitySessionHandler(final @NotNull FallbackUser user,
-                                       final @NotNull String username,
-                                       final @NotNull UUID uuid) {
-    super(user, username, uuid);
+                                       final @NotNull String username) {
+    super(user, username);
 
     // We don't want to check Geyser players for valid gravity, as this might cause issues because of the protocol
     this.enableGravityCheck = !user.isGeyser() && Sonar.get().getConfig().getVerification().getGravity().isEnabled();
@@ -46,7 +43,7 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
     user.delayedWrite(joinGame);
     // Then, write the ClientAbilities packet to the buffer
     // This is only necessary if the player is in creative mode
-    if (Sonar.get().getConfig().getVerification().getGravity().getGamemode() == CREATIVE) {
+    if (Sonar.get().getConfig().getVerification().getGamemode() == CREATIVE) {
       user.delayedWrite(DEFAULT_ABILITIES);
     }
     // Write the PositionLook packet to the buffer
@@ -54,10 +51,6 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
     // Write the DefaultSpawnPosition packet to the buffer
     if (user.getProtocolVersion().compareTo(MINECRAFT_1_19_3) >= 0) {
       user.delayedWrite(defaultSpawnPosition);
-    }
-    // Write the PlayerInfo packet to the buffer
-    if (user.getProtocolVersion().compareTo(MINECRAFT_1_16_4) >= 0) {
-      user.delayedWrite(PLAYER_INFO);
     }
     // 1.20.3+ introduced game events
     // Make sure the client knows that we're sending chunks next
@@ -101,16 +94,16 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
     }
 
     // Send the player to the protocol check
-    final var decoder = (FallbackPacketDecoder) user.getPipeline().get(FallbackPacketDecoder.class);
-    decoder.setListener(new FallbackProtocolSessionHandler(user, username, uuid, forceCAPTCHA));
+    final var decoder = user.getPipeline().get(FallbackPacketDecoder.class);
+    decoder.setListener(new FallbackProtocolSessionHandler(user, username, forceCAPTCHA));
   }
 
   @Override
   public void handle(final @NotNull FallbackPacket packet) {
-    if (packet instanceof SetPlayerPositionRotation) {
+    if (packet instanceof SetPlayerPositionRotationPacket) {
       // Make sure the player has teleported before checking for position packets
       if (teleported) {
-        final SetPlayerPositionRotation positionLook = (SetPlayerPositionRotation) packet;
+        final SetPlayerPositionRotationPacket positionLook = (SetPlayerPositionRotationPacket) packet;
         handleMovement(positionLook.getX(), positionLook.getY(), positionLook.getZ(), positionLook.isOnGround());
       }
     } else if (packet instanceof SetPlayerPositionPacket) {
@@ -169,7 +162,7 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
 
     // Log/debug position if enabled in the configuration
     if (Sonar.get().getConfig().getVerification().isDebugXYZPositions()) {
-      Sonar.get().getFallback().getLogger().info("{}: {}/{}/{}, ly={}/dy={}, {}",
+      Sonar.get().getLogger().info("{}: {}/{}/{}, ly={}/dy={}, {}",
         username, x, y, z, lastY, deltaY, isOnGround);
     }
 
@@ -191,6 +184,10 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
       movementTick++;
 
       if (enableGravityCheck) {
+        // Ensure that the player is above the collision platform
+        checkState(y > DEFAULT_Y_COLLIDE_POSITION,
+          "fell through blocks; y: " + y + " deltaY: " + deltaY + " tick: " + movementTick);
+
         // Predict the player's current motion based on the last motion
         // https://minecraft.wiki/w/Entity#Motion_of_entities
         final double predicted = (lastDeltaY - 0.08) * 0.98f;
@@ -220,7 +217,7 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
           markSuccess(true);
           return;
         }
-        user.fail("illegal collision tick: " + movementTick);
+        user.fail("illegal collision tick; tick: " + movementTick);
       }
       // Calculate the difference between the player's Y coordinate and the expected Y coordinate
       double collisionOffsetY = (DEFAULT_Y_COLLIDE_POSITION + blockType.getBlockHeight()) - y;
@@ -230,7 +227,14 @@ public final class FallbackGravitySessionHandler extends FallbackSessionHandler 
         collisionOffsetY += 1.62f;
       }
       // Make sure the player is actually colliding with the blocks and not only spoofing ground
-      checkState(collisionOffsetY > -0.03, "illegal collision: " + collisionOffsetY);
+      if (collisionOffsetY < -0.03) {
+        // Do not throw an exception if the user configured to display the CAPTCHA instead
+        if (Sonar.get().getConfig().getVerification().getGravity().isCaptchaOnFail()) {
+          markSuccess(true);
+          return;
+        }
+        user.fail("illegal collision; offset: " + collisionOffsetY + " tick: " + movementTick + " y: " + y);
+      }
       // The player has collided with the blocks, go on to the next stage
       markSuccess(false);
     }

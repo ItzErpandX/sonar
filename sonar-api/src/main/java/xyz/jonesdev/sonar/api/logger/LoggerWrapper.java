@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,6 @@ public interface LoggerWrapper {
 
   void error(final String message, final Object... args);
 
-  // Taken from
   // https://github.com/j256/ormlite-core/blob/master/src/main/java/com/j256/ormlite/logger/Logger.java
   String ARG_STRING = "{}";
   int ARG_STRING_LENGTH = ARG_STRING.length();

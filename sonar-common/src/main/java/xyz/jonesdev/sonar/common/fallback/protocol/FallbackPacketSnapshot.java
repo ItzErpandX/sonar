@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ import java.util.Map;
 
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.ID_TO_PROTOCOL_CONSTANT;
 
-// Mostly taken from
 // https://github.com/Nan1t/NanoLimbo/blob/main/src/main/java/ua/nanit/limbo/protocol/PacketSnapshot.java
 @Getter
 public final class FallbackPacketSnapshot implements FallbackPacket {

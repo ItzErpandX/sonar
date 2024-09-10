@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +21,16 @@ import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
 
 @UtilityClass
 public class MapColorPalette {
   // https://minecraft.wiki/w/Map_item_format#Full_color_tables
   public static final int[] COLOR_MAP = {
-    -16777216,
-    -16777216,
-    -16777216,
-    -16777216,
+    -1,
+    -1,
+    -1,
+    -1,
     -10912473,
     -9594576,
     -8408520,
@@ -172,25 +173,32 @@ public class MapColorPalette {
     -12910336,
   };
 
-  public int[] getBufferFromImage(final @NotNull BufferedImage bufferedImage) {
-    final int[] buffer = new int[128 * 128];
-
-    bufferedImage.getRGB(0, 0,
-      bufferedImage.getWidth(), bufferedImage.getHeight(),
-      buffer, 0, bufferedImage.getWidth());
-
-    for (int i = 0; i < buffer.length; i++) {
-      buffer[i] = mapColorToMinecraft(buffer[i]);
-    }
+  public byte[] imageToBuffer(final @NotNull BufferedImage bufferedImage) {
+    final byte[] buffer = new byte[128 * 128];
+    writeRGBBuffer(bufferedImage, buffer);
     return buffer;
   }
 
-  private byte mapColorToMinecraft(final int argb) {
+  private void writeRGBBuffer(final @NotNull BufferedImage bufferedImage, final byte @NotNull [] rgbArray) {
+    final Raster raster = bufferedImage.getRaster();
+    final Object data = new byte[raster.getNumBands()];
+    int yoff = 0, off;
+
+    for (int y = 0; y < raster.getHeight(); y++, yoff += raster.getWidth()) {
+      off = yoff;
+      for (int x = 0; x < raster.getWidth(); x++) {
+        final int rgb = bufferedImage.getColorModel().getRGB(raster.getDataElements(x, y, data));
+        rgbArray[off++] = rgbToNearestMinecraft(rgb);
+      }
+    }
+  }
+
+  private byte rgbToNearestMinecraft(final int rgb) {
     int minDistance = Integer.MAX_VALUE;
     byte closestIndex = 0;
     for (int i = 0; i < COLOR_MAP.length; i++) {
       final byte index = (byte) (i < 128 ? i : -129 + (i - 127));
-      final int distance = calculateColorDistance(argb, COLOR_MAP[i]);
+      final int distance = calculateColorDistance(rgb, COLOR_MAP[i]);
       if (distance < minDistance) {
         minDistance = distance;
         closestIndex = index;

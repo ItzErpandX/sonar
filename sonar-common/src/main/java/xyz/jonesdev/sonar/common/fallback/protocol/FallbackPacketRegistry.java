@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,9 @@ import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.configuration.FinishConfigurationPacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.configuration.RegistryDataPacket;
+import xyz.jonesdev.sonar.common.fallback.protocol.packets.handshake.HandshakePacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.login.LoginAcknowledgedPacket;
+import xyz.jonesdev.sonar.common.fallback.protocol.packets.login.LoginStartPacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.login.LoginSuccessPacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.*;
 
@@ -35,9 +37,14 @@ import java.util.function.Supplier;
 
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.*;
 
-// Mostly taken from
 // https://github.com/PaperMC/Velocity/blob/dev/3.0.0/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 public enum FallbackPacketRegistry {
+  HANDSHAKE {
+    {
+      serverbound.register(HandshakePacket.class, HandshakePacket::new,
+        map(0x00, MINECRAFT_1_7_2, false));
+    }
+  },
   LOGIN {
     {
       clientbound.register(DisconnectPacket.class, DisconnectPacket::new,
@@ -45,6 +52,8 @@ public enum FallbackPacketRegistry {
       clientbound.register(LoginSuccessPacket.class, LoginSuccessPacket::new,
         map(0x02, MINECRAFT_1_7_2, true));
 
+      serverbound.register(LoginStartPacket.class, LoginStartPacket::new,
+        map(0x00, MINECRAFT_1_7_2, false));
       serverbound.register(LoginAcknowledgedPacket.class, LoginAcknowledgedPacket::new,
         map(0x03, MINECRAFT_1_20_2, false));
     }
@@ -124,7 +133,7 @@ public enum FallbackPacketRegistry {
         map(0x1A, MINECRAFT_1_19_4, true),
         map(0x1B, MINECRAFT_1_20_2, true),
         map(0x1D, MINECRAFT_1_20_5, true));
-      clientbound.register(SetPlayerPositionRotation.class, SetPlayerPositionRotation::new,
+      clientbound.register(SetPlayerPositionRotationPacket.class, SetPlayerPositionRotationPacket::new,
         map(0x08, MINECRAFT_1_7_2, true),
         map(0x2E, MINECRAFT_1_9, true),
         map(0x2F, MINECRAFT_1_12_1, true),
@@ -208,22 +217,6 @@ public enum FallbackPacketRegistry {
         map(0x0E, MINECRAFT_1_7_2, true),
         map(0x00, MINECRAFT_1_9, true),
         map(0x01, MINECRAFT_1_19_4, true));
-      clientbound.register(PlayerInfoPacket.class, PlayerInfoPacket::new,
-        map(0x38, MINECRAFT_1_7_2, true),
-        map(0x2D, MINECRAFT_1_9, true),
-        map(0x2E, MINECRAFT_1_12_1, true),
-        map(0x30, MINECRAFT_1_13, true),
-        map(0x33, MINECRAFT_1_14, true),
-        map(0x34, MINECRAFT_1_15, true),
-        map(0x33, MINECRAFT_1_16, true),
-        map(0x32, MINECRAFT_1_16_2, true),
-        map(0x36, MINECRAFT_1_17, true),
-        map(0x34, MINECRAFT_1_19, true),
-        map(0x37, MINECRAFT_1_19_1, true),
-        map(0x36, MINECRAFT_1_19_3, true),
-        map(0x3A, MINECRAFT_1_19_4, true),
-        map(0x3C, MINECRAFT_1_20_2, true),
-        map(0x3E, MINECRAFT_1_20_5, true));
       clientbound.register(UpdateSectionBlocksPacket.class, UpdateSectionBlocksPacket::new,
         map(0x22, MINECRAFT_1_7_2, true),
         map(0x10, MINECRAFT_1_9, true),
@@ -444,7 +437,55 @@ public enum FallbackPacketRegistry {
         map(0x0D, MINECRAFT_1_19_4, false),
         map(0x0F, MINECRAFT_1_20_2, false),
         map(0x12, MINECRAFT_1_21, false));
-      serverbound.register(SetPlayerPositionRotation.class, SetPlayerPositionRotation::new,
+      serverbound.register(SetPlayerOnGround.class, SetPlayerOnGround::new,
+        map(0x03, MINECRAFT_1_7_2, false),
+        map(0x0F, MINECRAFT_1_9, false),
+        map(0x0D, MINECRAFT_1_12, false),
+        map(0x0C, MINECRAFT_1_12_1, false),
+        map(0x0F, MINECRAFT_1_13, false),
+        map(0x14, MINECRAFT_1_14, false),
+        map(0x15, MINECRAFT_1_16, false),
+        map(0x14, MINECRAFT_1_17, false),
+        map(0x16, MINECRAFT_1_19, false),
+        map(0x17, MINECRAFT_1_19_1, false),
+        map(0x16, MINECRAFT_1_19_3, false),
+        map(0x17, MINECRAFT_1_19_4, false),
+        map(0x19, MINECRAFT_1_20_2, false),
+        map(0x1A, MINECRAFT_1_20_3, false),
+        map(0x1D, MINECRAFT_1_20_5, false));
+      serverbound.register(SetPlayerPositionPacket.class, SetPlayerPositionPacket::new,
+        map(0x04, MINECRAFT_1_7_2, false),
+        map(0x0C, MINECRAFT_1_9, false),
+        map(0x0E, MINECRAFT_1_12, false),
+        map(0x0D, MINECRAFT_1_12_1, false),
+        map(0x10, MINECRAFT_1_13, false),
+        map(0x11, MINECRAFT_1_14, false),
+        map(0x12, MINECRAFT_1_16, false),
+        map(0x11, MINECRAFT_1_17, false),
+        map(0x13, MINECRAFT_1_19, false),
+        map(0x14, MINECRAFT_1_19_1, false),
+        map(0x13, MINECRAFT_1_19_3, false),
+        map(0x14, MINECRAFT_1_19_4, false),
+        map(0x16, MINECRAFT_1_20_2, false),
+        map(0x17, MINECRAFT_1_20_3, false),
+        map(0x1A, MINECRAFT_1_20_5, false));
+      serverbound.register(SetPlayerRotationPacket.class, SetPlayerRotationPacket::new,
+        map(0x05, MINECRAFT_1_7_2, false),
+        map(0x0E, MINECRAFT_1_9, false),
+        map(0x10, MINECRAFT_1_12, false),
+        map(0x0F, MINECRAFT_1_12_1, false),
+        map(0x12, MINECRAFT_1_13, false),
+        map(0x13, MINECRAFT_1_14, false),
+        map(0x14, MINECRAFT_1_16, false),
+        map(0x13, MINECRAFT_1_17, false),
+        map(0x15, MINECRAFT_1_19, false),
+        map(0x16, MINECRAFT_1_19_1, false),
+        map(0x15, MINECRAFT_1_19_3, false),
+        map(0x16, MINECRAFT_1_19_4, false),
+        map(0x18, MINECRAFT_1_20_2, false),
+        map(0x19, MINECRAFT_1_20_3, false),
+        map(0x1C, MINECRAFT_1_20_5, false));
+      serverbound.register(SetPlayerPositionRotationPacket.class, SetPlayerPositionRotationPacket::new,
         map(0x06, MINECRAFT_1_7_2, false),
         map(0x0D, MINECRAFT_1_9, false),
         map(0x0F, MINECRAFT_1_12, false),
@@ -462,38 +503,6 @@ public enum FallbackPacketRegistry {
         map(0x1B, MINECRAFT_1_20_5, false));
       serverbound.register(ConfirmTeleportationPacket.class, ConfirmTeleportationPacket::new,
         map(0x00, MINECRAFT_1_9, false));
-      serverbound.register(SetPlayerPositionPacket.class, SetPlayerPositionPacket::new,
-        map(0x04, MINECRAFT_1_7_2, false),
-        map(0x0C, MINECRAFT_1_9, false),
-        map(0x0E, MINECRAFT_1_12, false),
-        map(0x0D, MINECRAFT_1_12_1, false),
-        map(0x10, MINECRAFT_1_13, false),
-        map(0x11, MINECRAFT_1_14, false),
-        map(0x12, MINECRAFT_1_16, false),
-        map(0x11, MINECRAFT_1_17, false),
-        map(0x13, MINECRAFT_1_19, false),
-        map(0x14, MINECRAFT_1_19_1, false),
-        map(0x13, MINECRAFT_1_19_3, false),
-        map(0x14, MINECRAFT_1_19_4, false),
-        map(0x16, MINECRAFT_1_20_2, false),
-        map(0x17, MINECRAFT_1_20_3, false),
-        map(0x1A, MINECRAFT_1_20_5, false));
-      serverbound.register(SetPlayerOnGround.class, SetPlayerOnGround::new,
-        map(0x03, MINECRAFT_1_7_2, false),
-        map(0x0F, MINECRAFT_1_9, false),
-        map(0x0D, MINECRAFT_1_12, false),
-        map(0x0C, MINECRAFT_1_12_1, false),
-        map(0x0F, MINECRAFT_1_13, false),
-        map(0x14, MINECRAFT_1_14, false),
-        map(0x15, MINECRAFT_1_16, false),
-        map(0x14, MINECRAFT_1_17, false),
-        map(0x16, MINECRAFT_1_19, false),
-        map(0x17, MINECRAFT_1_19_1, false),
-        map(0x16, MINECRAFT_1_19_3, false),
-        map(0x17, MINECRAFT_1_19_4, false),
-        map(0x19, MINECRAFT_1_20_2, false),
-        map(0x1A, MINECRAFT_1_20_3, false),
-        map(0x1D, MINECRAFT_1_20_5, false));
       serverbound.register(TransactionPacket.class, TransactionPacket::new,
         map(0x0F, MINECRAFT_1_7_2, false),
         map(0x05, MINECRAFT_1_9, false),

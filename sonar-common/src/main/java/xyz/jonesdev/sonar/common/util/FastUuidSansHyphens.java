@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,6 @@ import java.util.UUID;
  * SOFTWARE.
  */
 
-// Taken from
 // https://github.com/PaperMC/Velocity/blob/dev/3.0.0/api/src/main/java/com/velocitypowered/api/util/FastUuidSansHyphens.java
 /**
  * This is a modified FastUUID implementation. The primary difference is that it does not dash its

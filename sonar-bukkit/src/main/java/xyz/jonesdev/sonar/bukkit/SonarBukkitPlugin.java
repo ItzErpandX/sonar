@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,18 @@
 package xyz.jonesdev.sonar.bukkit;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import xyz.jonesdev.sonar.bukkit.fallback.FallbackBukkitInjector;
 
 public final class SonarBukkitPlugin extends JavaPlugin {
   private SonarBukkit bootstrap;
+
+  @Override
+  public void onLoad() {
+    // Inject early if late-bind is disabled
+    if (!FallbackBukkitInjector.isLateBindEnabled()) {
+      FallbackBukkitInjector.inject();
+    }
+  }
 
   @Override
   public void onEnable() {

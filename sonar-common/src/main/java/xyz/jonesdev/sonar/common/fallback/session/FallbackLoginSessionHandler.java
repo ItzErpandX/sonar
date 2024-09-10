@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.ClientInformatio
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.KeepAlivePacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.PluginMessagePacket;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.*;
@@ -61,9 +60,8 @@ import static xyz.jonesdev.sonar.common.fallback.protocol.FallbackPreparer.*;
 public final class FallbackLoginSessionHandler extends FallbackSessionHandler {
 
   public FallbackLoginSessionHandler(final @NotNull FallbackUser user,
-                                     final @NotNull String username,
-                                     final @NotNull UUID uuid) {
-    super(user, username, uuid);
+                                     final @NotNull String username) {
+    super(user, username);
 
     // Start initializing the actual join process for pre-1.20.2 clients
     if (user.getProtocolVersion().compareTo(MINECRAFT_1_20_2) < 0) {
@@ -95,8 +93,8 @@ public final class FallbackLoginSessionHandler extends FallbackSessionHandler {
     // Make sure we can actually switch over to the next check
     updateEncoderDecoderState(FallbackPacketRegistry.GAME);
     // Pass the player to the next verification handler
-    final FallbackGravitySessionHandler gravitySessionHandler = new FallbackGravitySessionHandler(user, username, uuid);
-    final var decoder = (FallbackPacketDecoder) user.getPipeline().get(FallbackPacketDecoder.class);
+    final FallbackGravitySessionHandler gravitySessionHandler = new FallbackGravitySessionHandler(user, username);
+    final var decoder = user.getPipeline().get(FallbackPacketDecoder.class);
     decoder.setListener(gravitySessionHandler);
   }
 
@@ -150,7 +148,7 @@ public final class FallbackLoginSessionHandler extends FallbackSessionHandler {
   }
 
   private void updateEncoderDecoderState(final @NotNull FallbackPacketRegistry registry) {
-    final var decoder = (FallbackPacketDecoder) user.getPipeline().get(FallbackPacketDecoder.class);
+    final var decoder = user.getPipeline().get(FallbackPacketDecoder.class);
     final var encoder = (FallbackPacketEncoder) user.getPipeline().get(FallbackPacketEncoder.class);
     // Update the packet registry state in the encoder and decoder pipelines
     decoder.updateRegistry(registry);

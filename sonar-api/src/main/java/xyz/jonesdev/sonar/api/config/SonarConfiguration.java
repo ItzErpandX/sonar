@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 package xyz.jonesdev.sonar.api.config;
 
+import com.alessiodp.libby.Library;
 import com.j256.ormlite.db.DatabaseType;
 import lombok.*;
 import net.kyori.adventure.text.Component;
@@ -26,10 +27,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.jonesdev.sonar.api.Sonar;
 import xyz.jonesdev.sonar.api.command.SonarCommand;
-import xyz.jonesdev.sonar.api.logger.LoggerWrapper;
-import xyz.jonesdev.sonar.api.ormlite.H2DatabaseTypeAdapter;
-import xyz.jonesdev.sonar.api.ormlite.MariaDbDatabaseTypeAdapter;
-import xyz.jonesdev.sonar.api.ormlite.MysqlDatabaseTypeAdapter;
+import xyz.jonesdev.sonar.api.database.ormlite.H2DatabaseTypeAdapter;
+import xyz.jonesdev.sonar.api.database.ormlite.MariaDbDatabaseTypeAdapter;
+import xyz.jonesdev.sonar.api.database.ormlite.MysqlDatabaseTypeAdapter;
 import xyz.jonesdev.sonar.api.webhook.DiscordWebhook;
 
 import java.io.File;
@@ -48,24 +48,8 @@ public final class SonarConfiguration {
   private final SimpleYamlConfig generalConfig, messagesConfig, webhookConfig;
   @Getter
   private final File languageFile, pluginFolder;
-
-  static final LoggerWrapper LOGGER = new LoggerWrapper() {
-
-    @Override
-    public void info(final String message, final Object... args) {
-      Sonar.get().getLogger().info("[config] " + message, args);
-    }
-
-    @Override
-    public void warn(final String message, final Object... args) {
-      Sonar.get().getLogger().warn("[config] " + message, args);
-    }
-
-    @Override
-    public void error(final String message, final Object... args) {
-      Sonar.get().getLogger().error("[config] " + message, args);
-    }
-  };
+  @Getter
+  private Language language;
 
   public SonarConfiguration(final @NotNull File pluginFolder) {
     this.pluginFolder = pluginFolder;
@@ -82,14 +66,14 @@ public final class SonarConfiguration {
       final URL defaultLanguageFile = Sonar.class.getResource("/assets/language.properties");
       // Make sure the file actually exists before trying to copy it
       if (defaultLanguageFile == null) {
-        LOGGER.error("Cannot check for custom language (is the file missing?)");
+        Sonar.get().getLogger().error("Cannot check for custom language (is the file missing?)");
         return DEFAULT_FALLBACK_LANGUAGE;
       }
       // Copy the file to the plugin data directory
       try (final InputStream inputStream = defaultLanguageFile.openStream()) {
         Files.copy(inputStream, languageFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       } catch (IOException exception) {
-        LOGGER.error("Error copying file: {}", exception);
+        Sonar.get().getLogger().error("Error copying file: {}", exception);
         return DEFAULT_FALLBACK_LANGUAGE;
       }
     }
@@ -103,13 +87,13 @@ public final class SonarConfiguration {
         // Try parsing the property as a language
         return Language.fromCode(property);
       } catch (Throwable throwable) {
-        LOGGER.error("Could not find requested language: {}", throwable);
-        LOGGER.error("You can view a full list of valid language codes here:");
-        LOGGER.error("https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes");
-        LOGGER.error("If a translation does not exist yet, Sonar will use English (en).");
+        Sonar.get().getLogger().error("Could not find requested language: {}", throwable);
+        Sonar.get().getLogger().error("You can view a full list of valid language codes here:");
+        Sonar.get().getLogger().error("https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes");
+        Sonar.get().getLogger().error("If a translation does not exist yet, Sonar will use English (en).");
       }
     } catch (IOException exception) {
-      LOGGER.error("Error reading language file: {}", exception);
+      Sonar.get().getLogger().error("Error reading language file: {}", exception);
     }
     return DEFAULT_FALLBACK_LANGUAGE;
   }
@@ -121,27 +105,27 @@ public final class SonarConfiguration {
     }
 
     // Generate the language file and check what it's set to
-    Language preferredLanguage = getPreferredLanguage();
-    if (preferredLanguage == Language.SYSTEM) {
+    language = getPreferredLanguage();
+    if (language == Language.SYSTEM) {
       try {
         // Try using the system language to determine the language file
         final String property = System.getProperty("user.language", "en");
-        preferredLanguage = Language.fromCode(property);
+        language = Language.fromCode(property);
         // Make sure the user knows that we're using the system language for translations
-        LOGGER.info("Using system language ({}) for translations.", preferredLanguage);
+        Sonar.get().getLogger().info("Using system language ({}) for translations.", language);
       } catch (Exception exception) {
-        LOGGER.warn("Could not use system language for translations.");
-        LOGGER.warn("Using default language ({}) for translations.", preferredLanguage);
+        Sonar.get().getLogger().warn("Could not use system language for translations.");
+        Sonar.get().getLogger().warn("Using default language ({}) for translations.", language);
       }
     } else {
-      LOGGER.info("Using custom language ({}) for translations.", preferredLanguage);
+      Sonar.get().getLogger().info("Using custom language ({}) for translations.", language);
     }
 
     // Load all configurations
     try {
-      generalConfig.load(getAsset("config", preferredLanguage));
-      messagesConfig.load(getAsset("messages", preferredLanguage));
-      webhookConfig.load(getAsset("webhook", preferredLanguage));
+      generalConfig.load(getAsset("config", language));
+      messagesConfig.load(getAsset("messages", language));
+      webhookConfig.load(getAsset("webhook", language));
     } catch (Exception exception) {
       throw new IllegalStateException("Error loading configuration", exception);
     }
@@ -155,7 +139,7 @@ public final class SonarConfiguration {
 
     // General settings
     logPlayerAddresses = generalConfig.getBoolean("general.log-player-addresses");
-    maxOnlinePerIp = clamp(generalConfig.getInt("general.max-online-per-ip"), 1, 100);
+    maxOnlinePerIp = clamp(generalConfig.getInt("general.max-online-per-ip"), 0, 99);
 
     // Attack tracker
     minPlayersForAttack = clamp(generalConfig.getInt("attack-tracker.min-players-for-attack"), 2, 1024);
@@ -165,12 +149,6 @@ public final class SonarConfiguration {
 
     // Database
     database.type = Database.Type.valueOf(generalConfig.getString("database.type").toUpperCase());
-    database.filename = generalConfig.getString("database.filename");
-    database.host = generalConfig.getString("database.host");
-    database.port = generalConfig.getInt("database.port");
-    database.name = generalConfig.getString("database.name");
-    database.username = generalConfig.getString("database.username");
-    database.password = generalConfig.getString("database.password");
     database.maximumAge = clamp(generalConfig.getInt("database.maximum-age"), 1, 365);
 
     // Queue
@@ -180,53 +158,43 @@ public final class SonarConfiguration {
     verification.timing = Verification.Timing.valueOf(generalConfig.getString("verification.timing"));
     // Warn the user if the verification timing is set to NEVER
     if (verification.timing == Verification.Timing.NEVER) {
-      LOGGER.warn(" ");
-      LOGGER.warn("You have set the verification timing to 'NEVER'.");
-      LOGGER.warn("Sonar will NOT perform the bot verification at all, therefore making it useless.");
-      LOGGER.warn("It is highly suggested to set this option to either 'DURING_ATTACK' or 'ALWAYS'.");
-      LOGGER.warn("Please only edit this option if you really know what you are doing.");
-      LOGGER.warn(" ");
+      Sonar.get().getLogger().warn(" ");
+      Sonar.get().getLogger().warn("You have set the verification timing to 'NEVER'.");
+      Sonar.get().getLogger().warn("Sonar will NOT perform the bot verification at all, therefore making it useless.");
+      Sonar.get().getLogger().warn("It is highly suggested to set this option to either 'DURING_ATTACK' or 'ALWAYS'.");
+      Sonar.get().getLogger().warn("Please only edit this option if you really know what you are doing.");
+      Sonar.get().getLogger().warn(" ");
     }
 
     verification.gravity.enabled = generalConfig.getBoolean("verification.checks.gravity.enabled");
-    verification.gravity.checkCollisions = generalConfig.getBoolean("verification.checks.gravity.check-collisions");
+    verification.gravity.checkCollisions = generalConfig.getBoolean("verification.checks.collision.enabled");
     verification.gravity.captchaOnFail = generalConfig.getBoolean("verification.checks.gravity.captcha-on-fail");
     verification.gravity.maxMovementTicks = clamp(generalConfig.getInt("verification.checks.gravity.max-movement-ticks"), 2, 100);
-    verification.gravity.gamemode = Verification.Gravity.Gamemode.valueOf(generalConfig.getString("verification.checks.gravity.gamemode"));
 
-    verification.vehicle.timing = Verification.Timing.valueOf(generalConfig.getString("verification.checks.vehicle.timing"));
+    verification.vehicle.enabled = generalConfig.getBoolean("verification.checks.vehicle.enabled");
+    verification.vehicle.minimumPackets = clamp(generalConfig.getInt("verification.checks.vehicle.minimum-packets"), 0, 20);
 
     verification.map.timing = Verification.Timing.valueOf(generalConfig.getString("verification.checks.map-captcha.timing"));
-    verification.map.scratches = generalConfig.getBoolean("verification.checks.map-captcha.effects.scratches");
-    verification.map.ripple = generalConfig.getBoolean("verification.checks.map-captcha.effects.ripple");
-    verification.map.bump = generalConfig.getBoolean("verification.checks.map-captcha.effects.bump");
-
-    verification.map.distortion.enabled = generalConfig.getBoolean("verification.checks.map-captcha.effects.distortion.enabled");
-    verification.map.distortion.shape = generalConfig.getInt("verification.checks.map-captcha.effects.distortion.shape");
-    verification.map.distortion.distance = generalConfig.getInt("verification.checks.map-captcha.effects.distortion.distance");
-    verification.map.distortion.density = (float) generalConfig.getYaml().getDouble("verification.checks.map-captcha.effects.distortion.density");
-    verification.map.distortion.mix = (float) generalConfig.getYaml().getDouble("verification.checks.map-captcha.effects.distortion.mix");
-
-    final String backgroundImagePath = generalConfig.getString("verification.checks.map-captcha.background");
-    if (!backgroundImagePath.isEmpty()) {
-      verification.map.backgroundImage = new File(pluginFolder, backgroundImagePath);
-      if (!verification.map.backgroundImage.exists()) {
-        Sonar.get().getLogger().error("The background image does not exist! Please check the configuration.");
-      }
-    } else {
-      verification.map.backgroundImage = null;
-    }
-
-    verification.map.autoColor = generalConfig.getBoolean("verification.checks.map-captcha.auto-color");
-    verification.map.precomputeAmount = clamp(generalConfig.getInt("verification.checks.map-captcha.precompute"), 1, 1000);
+    verification.map.precomputeAmount = clamp(generalConfig.getInt("verification.checks.map-captcha.precompute"), 10, 5000);
     verification.map.maxDuration = clamp(generalConfig.getInt("verification.checks.map-captcha.max-duration"), 5000, 360000);
     verification.map.maxTries = generalConfig.getInt("verification.checks.map-captcha.max-tries");
-    verification.map.dictionary = generalConfig.getString("verification.checks.map-captcha.dictionary");
+    verification.map.alphabet = generalConfig.getString("verification.checks.map-captcha.alphabet");
+    verification.map.backgroundImage = null;
+
+    final String backgroundPath = generalConfig.getString("verification.checks.map-captcha.background");
+    if (!backgroundPath.isEmpty()) {
+      try (final InputStream inputStream = new FileInputStream(backgroundPath)) {
+        verification.map.backgroundImage = inputStream;
+      } catch (IOException exception) {
+        Sonar.get().getLogger().error("Could not find background image", exception);
+      }
+    }
 
     verification.brand.enabled = generalConfig.getBoolean("verification.checks.client-brand.enabled");
     verification.brand.validRegex = Pattern.compile(generalConfig.getString("verification.checks.client-brand.valid-regex"));
     verification.brand.maxLength = generalConfig.getInt("verification.checks.client-brand.max-length");
 
+    verification.gamemode = Verification.Gamemode.valueOf(generalConfig.getString("verification.gamemode"));
     verification.validNameRegex = Pattern.compile(generalConfig.getString("verification.checks.valid-name-regex"));
     verification.validLocaleRegex = Pattern.compile(generalConfig.getString("verification.checks.valid-locale-regex"));
     verification.maxLoginPackets = clamp(generalConfig.getInt("verification.checks.max-login-packets"), 128, 8192);
@@ -241,8 +209,6 @@ public final class SonarConfiguration {
     verification.rememberTime = clamp(generalConfig.getInt("verification.remember-time"), 0, 86400000);
     verification.blacklistTime = clamp(generalConfig.getInt("verification.blacklist-time"), 0, 86400000);
     verification.blacklistThreshold = clamp(generalConfig.getInt("verification.blacklist-threshold"), 0, 100);
-    verification.whitelistedProtocols.clear();
-    verification.whitelistedProtocols.addAll(generalConfig.getIntList("verification.whitelisted-protocols"));
     verification.blacklistedProtocols.clear();
     verification.blacklistedProtocols.addAll(generalConfig.getIntList("verification.blacklisted-protocols"));
 
@@ -318,7 +284,7 @@ public final class SonarConfiguration {
     final String resourceName = url + "/" + language.getCode() + ".yml";
     URL result = Sonar.class.getResource("/assets/" + resourceName);
     if (result == null) {
-      LOGGER.warn("Could not find " + resourceName + "! Using en.yml!");
+      Sonar.get().getLogger().warn("Could not find " + resourceName + "! Using en.yml!");
       result = Objects.requireNonNull(Sonar.class.getResource("/assets/" + url + "/en.yml"));
     }
     return result;
@@ -332,8 +298,8 @@ public final class SonarConfiguration {
     return output;
   }
 
-  public String formatAddress(final InetAddress inetAddress) {
-    return logPlayerAddresses ? inetAddress.toString() : "/<ip address withheld>";
+  public @NotNull String formatAddress(final @NotNull InetAddress inetAddress) {
+    return logPlayerAddresses ? inetAddress.getHostAddress() : "<ip address withheld>";
   }
 
   @Getter
@@ -397,26 +363,11 @@ public final class SonarConfiguration {
     @Getter
     public static final class Map {
       private Timing timing;
-      private boolean scratches;
-      private boolean ripple;
-      private boolean bump;
-      private File backgroundImage;
-      private boolean autoColor;
       private int precomputeAmount;
       private int maxDuration;
       private int maxTries;
-      private String dictionary;
-
-      private Smear distortion = new Smear();
-
-      @Getter
-      public static final class Smear {
-        private boolean enabled;
-        private int shape;
-        private int distance;
-        private float density;
-        private float mix;
-      }
+      private String alphabet;
+      private InputStream backgroundImage;
     }
 
     @Getter
@@ -424,25 +375,13 @@ public final class SonarConfiguration {
       private boolean enabled;
       private boolean checkCollisions;
       private boolean captchaOnFail;
-      private Gamemode gamemode;
       private int maxMovementTicks;
-
-      @Getter
-      @RequiredArgsConstructor
-      public enum Gamemode {
-        SURVIVAL(0),
-        CREATIVE(1),
-        ADVENTURE(2),
-        // Keep this for backwards compatibility
-        SPECTATOR(2);
-
-        private final int id;
-      }
     }
 
     @Getter
     public static final class Vehicle {
-      private Timing timing;
+      private boolean enabled;
+      private int minimumPackets;
     }
 
     @Getter
@@ -450,6 +389,23 @@ public final class SonarConfiguration {
       private boolean enabled;
       private int maxLength;
       private Pattern validRegex;
+    }
+
+    private Gamemode gamemode;
+
+    @Getter
+    @RequiredArgsConstructor
+    public enum Gamemode {
+      NOT_SET(-1),
+      SURVIVAL(0),
+      CREATIVE(1),
+      ADVENTURE(2);
+
+      private final int id;
+
+      public boolean isSurvivalOrAdventure() {
+        return this == SURVIVAL || this == ADVENTURE;
+      }
     }
 
     private boolean checkGeyser;
@@ -466,7 +422,6 @@ public final class SonarConfiguration {
     private int rememberTime;
     private int blacklistTime;
     private int blacklistThreshold;
-    private final Collection<Integer> whitelistedProtocols = new HashSet<>(0);
     private final Collection<Integer> blacklistedProtocols = new HashSet<>(0);
 
     private Component tooFastReconnect;
@@ -487,22 +442,38 @@ public final class SonarConfiguration {
     @Getter
     @RequiredArgsConstructor
     public enum Type {
-      MYSQL("jdbc:mysql://%s:%d/%s", new MysqlDatabaseTypeAdapter()),
-      MARIADB("jdbc:mariadb://%s:%d/%s", new MariaDbDatabaseTypeAdapter()),
-      H2("jdbc:h2:file:%s", new H2DatabaseTypeAdapter()),
-      NONE(null, null);
+      MYSQL("MySQL", "jdbc:mysql://%s:%d/%s", new MysqlDatabaseTypeAdapter(),
+        Library.builder()
+          .groupId("com{}mysql")
+          .artifactId("mysql-connector-j")
+          .version("9.0.0")
+          .relocate("com{}mysql", "xyz{}jonesdev{}sonar{}libs{}mysql")
+          .build()),
+      MARIADB("MariaDB", "jdbc:mariadb://%s:%d/%s", new MariaDbDatabaseTypeAdapter(),
+        Library.builder()
+          .groupId("org{}mariadb{}jdbc")
+          .artifactId("mariadb-java-client")
+          .version("3.4.1")
+          .relocate("org{}mariadb", "xyz{}jonesdev{}sonar{}libs{}mariadb")
+          .build()),
+      H2("H2", "jdbc:h2:file:%s", new H2DatabaseTypeAdapter(),
+        Library.builder()
+          .groupId("com{}h2database")
+          .artifactId("h2")
+          .version("2.2.220")
+          .relocate("org{}h2", "xyz{}jonesdev{}sonar{}libs{}h2")
+          .build()),
+      NONE("None", null, null, null);
 
+      private final String displayName;
       private final String connectionString;
       private final DatabaseType databaseType;
+      private final Library databaseDriver;
+      @Setter
+      private boolean loaded;
     }
 
     private Type type;
-    private String filename;
-    private String host;
-    private int port;
-    private String name;
-    private String username;
-    private String password;
     private int maximumAge;
   }
 

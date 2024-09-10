@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,34 +25,15 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SubcommandInfo {
-
-  /**
-   * @return Name of the subcommand
-   */
   String name();
 
-  /**
-   * @return Aliases of the subcommand
-   */
   String[] aliases() default {};
 
-  /**
-   * @return Arguments of the subcommand
-   */
   String[] arguments() default {};
 
-  /**
-   * @return Whether the subcommands requires arguments
-   */
   boolean argumentsRequired() default true;
 
-  /**
-   * @return Whether the subcommands can only be executed by a player
-   */
   boolean onlyPlayers() default false;
 
-  /**
-   * @return Whether the subcommands can only be executed by console
-   */
   boolean onlyConsole() default false;
 }

@@ -40,12 +40,12 @@ class LibraryLoader {
       Library.builder()
         .groupId("com{}google{}code{}gson")
         .artifactId("gson")
-        .version("2.10.1")
+        .version("2.11.0")
         .relocate("com{}google{}gson", "xyz{}jonesdev{}sonar{}libs{}gson")
         .build(),
       // Caffeine
       Library.builder()
-        .groupId("com.github.ben-manes.caffeine")
+        .groupId("com{}github{}ben-manes{}caffeine")
         .artifactId("caffeine")
         .version("3.1.8")
         .relocate("com{}github{}benmanes{}caffeine", "xyz{}jonesdev{}sonar{}libs{}caffeine")
@@ -57,26 +57,12 @@ class LibraryLoader {
         .version("6.1")
         .relocate("com{}j256{}ormlite", "xyz{}jonesdev{}sonar{}libs{}ormlite")
         .build(),
-      // MySQL driver
+      // JHLabs image filters
       Library.builder()
-        .groupId("com{}mysql")
-        .artifactId("mysql-connector-j")
-        .version("8.4.0")
-        .relocate("com{}mysql", "xyz{}jonesdev{}sonar{}libs{}mysql")
-        .build(),
-      // MariaDB driver
-      Library.builder()
-        .groupId("org{}mariadb{}jdbc")
-        .artifactId("mariadb-java-client")
-        .version("3.4.0")
-        .relocate("org{}mariadb", "xyz{}jonesdev{}sonar{}libs{}mariadb")
-        .build(),
-      // H2 driver
-      Library.builder()
-        .groupId("com{}h2database")
-        .artifactId("h2")
-        .version("2.1.214")
-        .relocate("org{}h2", "xyz{}jonesdev{}sonar{}libs{}h2")
+        .groupId("com{}jhlabs")
+        .artifactId("filters")
+        .version("2.0.235-1")
+        .relocate("com{}jhlabs", "xyz{}jonesdev{}sonar{}libs{}jhlabs")
         .build()
     );
 
@@ -92,6 +78,12 @@ class LibraryLoader {
         Library.builder()
           .groupId("net{}kyori")
           .artifactId("adventure-text-serializer-gson")
+          .version("4.17.0")
+          .relocate("net{}kyori", "xyz{}jonesdev{}sonar{}libs{}kyori")
+          .build(),
+        Library.builder()
+          .groupId("net{}kyori")
+          .artifactId("adventure-nbt")
           .version("4.17.0")
           .relocate("net{}kyori", "xyz{}jonesdev{}sonar{}libs{}kyori")
           .build()

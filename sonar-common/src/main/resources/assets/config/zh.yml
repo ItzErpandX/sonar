@@ -10,12 +10,13 @@
 #
 # 需要帮助吗? https://jonesdev.xyz/discord
 # 源代码: https://github.com/jonesdevelopment/sonar
-# Copyright Jones Development and Sonar Contributors, licensed under GPL-3.0
+# 文件: https://docs.jonesdev.xyz/administration/configuring-sonar
+# Copyright Jones Development and Sonar Contributors, 以 GPL-3.0 许可
 #
 
 # 未归类的设置
 general:
-  # Sonar 是否应该自动检查新的更新？
+  # Sonar 是否应该自动检查新的更新?
   # Sonar 使用 GitHub API 检查当前版本是否过时
   check-for-updates: true
   # Sonar 应该在控制台中打印玩家的 IP 地址吗?
@@ -78,26 +79,26 @@ verification:
     gravity:
       # Sonar 是否应该检查玩家的下落移动? (推荐启用)
       enabled: true
-      # Sonar 是否应该生成方块平台以检查玩家下落与方块之间的碰撞? (推荐启用)
-      check-collisions: true
       # 当玩家验证失败时 是否向他们发送验证码?
       captcha-on-fail: false
       # 玩家跌落在平台上多少tick后才能被算作站在平台上?
       max-movement-ticks: 8
-      # 玩家在虚拟服务器中的游戏模式
-      # 可用类型: SURVIVAL, CREATIVE, ADVENTURE
-      # - SURVIVAL: 生存模式, 所有UI可见
-      # - CREATIVE: 创造模式, 隐藏血量和饱食度
-      # - ADVENTURE: 冒险模式, 所有UI可见
-      gamemode: ADVENTURE
+
+    # 检查玩家是否与下方生成的方块发生碰撞
+    collision:
+      # Sonar 是否应该生成方块平台以检查玩家下落与方块之间的碰撞? (推荐启用)
+      enabled: true
+      # Sonar 应该使用哪种类型的块作为碰撞平台?
+      # 可用类型: STONE, BARRIER, TRAPDOOR, ENCHANTMENT_TABLE
+      # 只有当您知道您在做什么时, 才应该编辑它.
+      collision-block-type: TRAPDOOR
 
     # 检查客户端坐在实体上时是否发送了正确的数据包
     vehicle:
-      # 可用类型: ALWAYS, DURING_ATTACK, NEVER
-      # - ALWAYS: 始终应用该检查
-      # - DURING_ATTACK: 仅在疑似遭受攻击时应用该检查
-      # - NEVER: 永远不应用该检查
-      timing: ALWAYS
+      # 声纳是否应该检查玩家是否正确进入船只?
+      enabled: true
+      # 客户端发送的最小数据包数量
+      minimum-packets: 2
 
     # 地图验证码
     map-captcha:
@@ -107,49 +108,20 @@ verification:
       # - DURING_ATTACK: 仅在疑似遭受攻击时应用该检查
       # - NEVER: 永远不应用该检查
       timing: NEVER
-      # 图像效果选项 (用于混淆自动图像识别)
-      # 只有当您知道您在做什么时, 才应该编辑它.
-      effects:
-        # 是否向图像添加随机线条
-        scratches: true
-        # 是否应用纹波滤镜
-        ripple: true
-        # 是否锐化文本
-        bump: true
-        # 失真滤镜
-        distortion:
-          # 是否在验证码上应用失真滤镜?
-          enabled: true
-          # Sonar 应该应用什么形状的失真滤镜?
-          # 支持的选项: 0, 1, 2, 3
-          # - 0: 交叉
-          # - 1: 线条
-          # - 2: 圆形
-          # - 3: 方形
-          shape: 2
-          # 畸变的像素/对象之间的距离
-          distance: 5
-          # 畸变的像素/对象之间的密度
-          density: 0.1
-          # 对象与另一个对象之间的颜色的混合的量
-          mix: 0.15
       # 用于当作验证码的背景的图片
       # 如果未找到指定的图片, 则自动通过噪音生成一个随机的背景图片.
       # 如果图片在该插件的配置文件夹下, 则可以简单地输入图片的文件名.
       background: ''
-      # Sonar 应该检测背景图片的颜色吗?
-      # 这样做是为了避免无法区分背景和验证码的颜色.
-      # 如果禁用该功能, Sonar 将会随机应用渐变的颜色.
-      auto-color: false
       # Sonar 应该一次准备多少个验证码?
       precompute: 500
-      # Sonar 应该给玩家多少时间完成验证码? (该值为毫秒. 1秒等于1000毫秒.)
+      # Sonar 应该给玩家多少时间完成验证码?
+      # (该值为毫秒. 1秒等于1000毫秒.)
       max-duration: 30000
       # 玩家最多能输入多少次错误的验证码?
       max-tries: 3
       # 允许出现在验证码答案中的字符
       # 不建议添加可能看起来彼此相似的数字或字母
-      dictionary: '1235689'
+      alphabet: 'abcdefhjkmnoprstuxyz'
 
     # 检查玩家是否正在向服务器发送有效的客户端标识符
     client-brand:
@@ -164,18 +136,20 @@ verification:
     valid-name-regex: ^[a-zA-Z0-9_]+$
     # 用于检查客户端语言(例如 zh_CN)的正则表达式
     valid-locale-regex: ^[a-zA-Z_]+$
-    # 玩家必须在多少毫秒内回复Ping?
-    max-ping: 10000
     # 玩家最多能发送多少个数据包用于登录?
     max-login-packets: 256
 
   # 开启后 玩家将在验证成功后被重定向到指定的服务器
   # 该功能由 Mojang 在 Minecraft 1.20.5 版本中引入
+  # 教程: https://youtu.be/aSWrzQVjGnc?t=71
   transfer:
     # Sonar 是否应该将玩家重定向到指定的服务器而不是踢出玩家?
     # 为此您必须在服务器软件的配置文件中允许接受来自transfer的连接.
     # 此外 您可能希望减少 Velocity 或其它服务器软件/插件的登录速率限制
     # 因为这可能会阻止玩家快速地重新连接到服务器
+    # 如果你的服务器允许 Bedrock 玩家通过间歇泉加入, 请确保为间歇泉设置了
+    # 传输工具 TransferTool, 以便将 Bedrock 玩家重定向到正确的服务器.
+    # https://github.com/onebeastchris/TransferTool
     enabled: false
     # 当玩家通过验证后, Sonar 应该将玩家转移到哪个服务器
     # 请输入玩家正常连接服务器时使用的服务器IP或域名
@@ -185,6 +159,16 @@ verification:
     # 如果服务器地址不包含端口 请保留25565.
     destination-port: 25565
 
+  # 玩家在虚拟服务器中的游戏模式
+  # 可用类型: SURVIVAL, CREATIVE, ADVENTURE
+  # - SURVIVAL: 生存模式, 所有UI可见
+  # - CREATIVE: 创造模式, 隐藏血量和饱食度
+  # - ADVENTURE: 冒险模式, 所有UI可见
+  gamemode: ADVENTURE
+  # Sonar 缓存它发送到客户端的大部分数据包, 包括 LoginSuccess 数据包.
+  # Sonar 应该使用哪个用户名来接收 LoginSuccess 数据包?
+  # 如果不修改客户端, 用户名将不会对玩家可见
+  cached-username: "Sonar"
   # 当 Sonar 尝试验证玩家时 是否在控制台中打印它?
   log-connections: true
   # Sonar 是否应该记录在攻击期间内的验证会话?
@@ -213,9 +197,7 @@ verification:
   blacklist-time: 600000
   # 玩家必须验证失败多少次才会被列入黑名单? (设置为0以完全禁用)
   blacklist-threshold: 2
-  # Sonar 不应该检查哪些协议? (即 跳过检查)
+  # 黑名单中的协议将阻止所有使用该协议的客户端.
   # 您可以在 https://wiki.vg/Protocol_version_numbers 找到所有协议号
   # 例如 Minecraft 1.20 对应的协议号为763.
-  whitelisted-protocols: []
-  # 黑名单中的协议将阻止所有使用该协议的客户端.
   blacklisted-protocols: []

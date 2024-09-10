@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,21 +19,20 @@ package xyz.jonesdev.sonar.api;
 
 import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Objects;
+import xyz.jonesdev.sonar.api.exception.AlreadyInitializedException;
 
 @UtilityClass
 public class SonarSupplier {
-  private Sonar sonar;
+  private Sonar _sonar;
 
-  public void set(final @NotNull Sonar s) {
-    if (sonar != null) {
-      throw new AlreadyInitializedException();
+  public void set(final @NotNull Sonar instance) {
+    if (_sonar != null) {
+      throw new AlreadyInitializedException("Sonar is already initialized");
     }
-    sonar = Objects.requireNonNull(s);
+    _sonar = instance;
   }
 
   public @NotNull Sonar get() {
-    return sonar;
+    return _sonar;
   }
 }

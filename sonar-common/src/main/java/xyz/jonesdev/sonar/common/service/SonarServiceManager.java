@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ package xyz.jonesdev.sonar.common.service;
 import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.Sonar;
-import xyz.jonesdev.sonar.common.statistics.CachedBandwidthStatistics;
+import xyz.jonesdev.sonar.common.statistics.BandwidthStatistics;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,21 +43,19 @@ public final class SonarServiceManager {
 
   public void start() {
     VERBOSE.scheduleAtFixedRate(() -> {
-      // Make sure to clean up the cached statistics
-      // since we don't want to display wrong values.
+      // Make sure to clean up the cached statistics since we don't want to display wrong values
       Sonar.get().getStatistics().cleanUpCache();
-      Sonar.get().getFallback().getRatelimiter().getFailCountCache().cleanUp();
       Sonar.get().getFallback().getBlacklist().cleanUp();
       // Update the attack tracker
       Sonar.get().getAttackTracker().checkIfUnderAttack();
-      // Update the action bar verbose
-      Sonar.get().getVerboseHandler().observe();
+      // Publish the action bar notifications
+      Sonar.get().getActionBarNotificationHandler().handleNotification();
     }, 0L, 250L, TimeUnit.MILLISECONDS);
 
     FALLBACK_QUEUE.scheduleAtFixedRate(() -> Sonar.get().getFallback().getQueue().poll(),
       1L, 1L, TimeUnit.SECONDS);
 
-    STATISTICS.scheduleAtFixedRate(CachedBandwidthStatistics::reset,
+    STATISTICS.scheduleAtFixedRate(BandwidthStatistics::reset,
       0L, 1L, TimeUnit.SECONDS);
   }
 

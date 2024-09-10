@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,12 @@
 package xyz.jonesdev.sonar.common.fallback.protocol.packets.play;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.CorruptedFrameException;
 import lombok.Getter;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion;
 import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacket;
+import xyz.jonesdev.sonar.common.util.exception.QuietDecoderException;
 
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.MINECRAFT_1_8;
 import static xyz.jonesdev.sonar.common.util.ProtocolUtil.readExtendedForgeShort;
@@ -50,12 +50,12 @@ public final class PluginMessagePacket implements FallbackPacket {
     if (protocolVersion.compareTo(MINECRAFT_1_8) >= 0) {
       length = byteBuf.readableBytes();
       if (length > Short.MAX_VALUE) {
-        throw new CorruptedFrameException("Got too much data: " + length);
+        throw QuietDecoderException.INSTANCE;
       }
     } else {
       length = readExtendedForgeShort(byteBuf);
       if (length > FORGE_MAX_ARRAY_LENGTH) {
-        throw new CorruptedFrameException("Got too much data: " + length);
+        throw QuietDecoderException.INSTANCE;
       }
     }
 

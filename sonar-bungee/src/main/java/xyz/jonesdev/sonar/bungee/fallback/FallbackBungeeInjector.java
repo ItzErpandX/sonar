@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,13 @@ import io.netty.channel.ChannelInitializer;
 import lombok.experimental.UtilityClass;
 import net.md_5.bungee.netty.PipelineUtils;
 import sun.misc.Unsafe;
-import xyz.jonesdev.sonar.api.ReflectiveOperationException;
-import xyz.jonesdev.sonar.common.fallback.injection.FallbackInjectedChannelInitializer;
+import xyz.jonesdev.sonar.api.Sonar;
+import xyz.jonesdev.sonar.common.fallback.netty.FallbackInjectedChannelInitializer;
 
 import java.lang.reflect.Field;
 
 import static net.md_5.bungee.netty.PipelineUtils.PACKET_DECODER;
-import static xyz.jonesdev.sonar.api.fallback.FallbackPipelines.FALLBACK_HANDLER;
+import static xyz.jonesdev.sonar.api.fallback.FallbackPipelines.FALLBACK_PACKET_HANDLER;
 
 @UtilityClass
 public class FallbackBungeeInjector {
@@ -39,23 +39,21 @@ public class FallbackBungeeInjector {
 
       // Make sure to store the original channel initializer
       final ChannelInitializer<Channel> originalInitializer = PipelineUtils.SERVER_CHILD;
-      final ChannelInitializer<Channel> fallbackInitializer = new FallbackInjectedChannelInitializer(
-        originalInitializer, pipeline -> pipeline.addAfter(PACKET_DECODER, FALLBACK_HANDLER,
-        new FallbackBungeeChannelHandler(pipeline.channel())));
+      final ChannelInitializer<Channel> injectedInitializer = new FallbackInjectedChannelInitializer(
+      originalInitializer, pipeline -> pipeline.addAfter(PACKET_DECODER, FALLBACK_PACKET_HANDLER,
+        new FallbackBungeeInboundHandler()));
 
       final Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
       unsafeField.setAccessible(true);
       final Unsafe unsafe = (Unsafe) unsafeField.get(null);
 
-      // Get the base object (the object containing the field)
       final Object base = unsafe.staticFieldBase(childField);
-      // Get the offset of the static field within its class
       final long offset = unsafe.staticFieldOffset(childField);
 
-      // Replace the original channel initializer
-      unsafe.putObject(base, offset, fallbackInitializer);
+      // Replace the original channel initializer with our new injected initializer
+      unsafe.putObject(base, offset, injectedInitializer);
     } catch (Exception exception) {
-      throw new ReflectiveOperationException(exception);
+      Sonar.get().getLogger().error("An error occurred while injecting {}", exception);
     }
   }
 }

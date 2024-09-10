@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ import static xyz.jonesdev.sonar.common.util.ProtocolUtil.writeVarInt;
 @NoArgsConstructor
 @AllArgsConstructor
 public final class MapDataPacket implements FallbackPacket {
-  private int[] buffer;
+  private byte[] buffer;
   private int x, y;
 
   @Override
@@ -43,7 +43,7 @@ public final class MapDataPacket implements FallbackPacket {
       byteBuf.writeByte(0); // scaling
       byteBuf.writeByte(x);
       byteBuf.writeByte(y);
-      writeArray(byteBuf, buffer);
+      byteBuf.writeBytes(buffer);
     } else {
       byteBuf.writeByte(0); // scaling
 
@@ -68,13 +68,7 @@ public final class MapDataPacket implements FallbackPacket {
       byteBuf.writeByte(y);
 
       writeVarInt(byteBuf, buffer.length);
-      writeArray(byteBuf, buffer);
-    }
-  }
-
-  private static void writeArray(final ByteBuf byteBuf, final int @NotNull [] array) {
-    for (final int i : array) {
-      byteBuf.writeByte(i);
+      byteBuf.writeBytes(buffer);
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,39 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/*
+ * Copyright 2021 Andrew Steinborn
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies
+ * or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package xyz.jonesdev.sonar.common.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
+import io.netty.util.Version;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.nbt.*;
 import org.jetbrains.annotations.NotNull;
+import xyz.jonesdev.sonar.common.util.exception.QuietDecoderException;
 
 import java.io.DataOutput;
 import java.io.IOException;
@@ -34,32 +57,67 @@ import java.util.BitSet;
 import java.util.EnumSet;
 import java.util.UUID;
 
-// Mostly taken from
 // https://github.com/PaperMC/Velocity/blob/dev/3.0.0/proxy/src/main/java/com/velocitypowered/proxy/protocol/ProtocolUtils.java
 @UtilityClass
 public class ProtocolUtil {
+  public static final boolean DEBUG = Boolean.getBoolean("sonar.debug-traces");
   public static final String BRAND_CHANNEL_LEGACY = "MC|Brand";
   public static final String BRAND_CHANNEL = "minecraft:brand";
+  private static final int[] VAR_INT_LENGTHS = new int[65];
 
-  public static int readVarInt(final ByteBuf byteBuf) {
-    int read = readVarIntSafely(byteBuf);
-    if (read == Integer.MIN_VALUE) {
-      throw new CorruptedFrameException("Corrupt VarInt");
+  static {
+    for (int i = 0; i <= 32; ++i) {
+      VAR_INT_LENGTHS[i] = (int) Math.ceil((31d - (i - 1)) / 7d);
     }
-    return read;
+    VAR_INT_LENGTHS[32] = 1;
   }
 
-  public static int readVarIntSafely(final @NotNull ByteBuf byteBuf) {
-    int i = 0;
-    int maxRead = Math.min(5, byteBuf.readableBytes());
-    for (int j = 0; j < maxRead; j++) {
-      int k = byteBuf.readByte();
+  public static int varIntBytes(final int value) {
+    return VAR_INT_LENGTHS[Integer.numberOfLeadingZeros(value)];
+  }
+
+  public static void checkNettyVersion() {
+    final Version version = Version.identify().getOrDefault("netty-all", Version.identify().get("netty-common"));
+
+    // We're pretty much only doing this to avoid incompatibilities on Bukkit,
+    // so we don't really care if the version couldn't be resolved.
+    if (version == null) {
+      return;
+    }
+
+    final String[] artifactVersion = version.artifactVersion().split("\\.");
+    final int major = Integer.parseInt(artifactVersion[0]);
+    final int minor = Integer.parseInt(artifactVersion[1]);
+
+    // Enforce Netty >4.1.x
+    if (major < 4 || (major == 4 && minor < 1)) {
+      throw new IllegalStateException("Your Netty version is too old to run Sonar! Please use Netty >4.1.x.");
+    }
+  }
+
+  public static int readVarInt(final @NotNull ByteBuf byteBuf) {
+    final int readable = byteBuf.readableBytes();
+    if (readable == 0) {
+      throw DEBUG ? new DecoderException("Empty buffer") : QuietDecoderException.INSTANCE;
+    }
+
+    // We can read at least one byte, and this should be a common case
+    int k = byteBuf.readByte();
+    if ((k & 0x80) != 128) {
+      return k;
+    }
+
+    // In case decoding one byte was not enough, use a loop to decode up to the next 4 bytes
+    final int maxRead = Math.min(5, readable);
+    int i = k & 0x7F;
+    for (int j = 1; j < maxRead; j++) {
+      k = byteBuf.readByte();
       i |= (k & 0x7F) << j * 7;
       if ((k & 0x80) != 128) {
         return i;
       }
     }
-    return Integer.MIN_VALUE;
+    throw DEBUG ? new DecoderException("Bad VarInt") : QuietDecoderException.INSTANCE;
   }
 
   public static void writeVarInt(final ByteBuf byteBuf, final int value) {
@@ -160,9 +218,8 @@ public class ProtocolUtil {
     }
   }
 
-  public static void readUUID(final @NotNull ByteBuf byteBuf) {
-    byteBuf.readLong(); // least
-    byteBuf.readLong(); // most
+  public static @NotNull UUID readUUID(final @NotNull ByteBuf byteBuf) {
+    return new UUID(byteBuf.readLong(), byteBuf.readLong());
   }
 
   public static byte @NotNull [] readByteArray(final ByteBuf byteBuf) {
@@ -171,33 +228,33 @@ public class ProtocolUtil {
 
   public static byte @NotNull [] readByteArray(final ByteBuf byteBuf, final int cap) {
     int length = readVarInt(byteBuf);
-    checkFrame(length >= 0, "Got a negative-length array");
-    checkFrame(length <= cap, "Bad array size");
-    checkFrame(byteBuf.isReadable(length), "Trying to read an array that is too long");
+    checkState(length >= 0, "Got a negative-length array");
+    checkState(length <= cap, "Bad array size");
+    checkState(byteBuf.isReadable(length), "Trying to read an array that is too long");
     byte[] array = new byte[length];
     byteBuf.readBytes(array);
     return array;
   }
 
-  public static @NotNull String readString(final ByteBuf byteBuf) throws CorruptedFrameException {
+  public static @NotNull String readString(final ByteBuf byteBuf) throws DecoderException {
     return readString(byteBuf, Short.MAX_VALUE);
   }
 
   public static @NotNull String readString(final ByteBuf byteBuf,
-                                           final int cap) throws CorruptedFrameException {
+                                           final int cap) throws DecoderException {
     final int length = readVarInt(byteBuf);
     return readString(byteBuf, cap, length);
   }
 
   public static @NotNull String readString(final @NotNull ByteBuf byteBuf,
                                            final int cap,
-                                           final int length) throws CorruptedFrameException {
-    checkFrame(length >= 0, "Got a negative-length string");
-    checkFrame(length <= cap * 3, "Bad string size");
-    checkFrame(byteBuf.isReadable(length), "Tried to read a too-long string");
+                                           final int length) throws DecoderException {
+    checkState(length >= 0, "Got a negative-length string");
+    checkState(length <= cap * 3, "Bad string size");
+    checkState(byteBuf.isReadable(length), "Tried to read a too-long string");
     final String str = byteBuf.toString(byteBuf.readerIndex(), length, StandardCharsets.UTF_8);
     byteBuf.readerIndex(byteBuf.readerIndex() + length);
-    checkFrame(str.length() <= cap, "Got a too-long string");
+    checkState(str.length() <= cap, "Got a too-long string");
     return str;
   }
 
@@ -220,7 +277,7 @@ public class ProtocolUtil {
   }
 
   public static void writeArray(final ByteBuf byteBuf, final byte @NotNull [] bytes) {
-    checkFrame(bytes.length < Short.MAX_VALUE, "Too long array");
+    checkState(bytes.length < Short.MAX_VALUE, "Too long array");
     writeVarInt(byteBuf, bytes.length);
     byteBuf.writeBytes(bytes);
   }
@@ -232,7 +289,6 @@ public class ProtocolUtil {
     }
   }
 
-  // Taken from
   // https://github.com/Nan1t/NanoLimbo/blob/main/src/main/java/ua/nanit/limbo/protocol/ByteMessage.java#L276
   public <E extends Enum<E>> void writeEnumSet(final ByteBuf byteBuf,
                                                final EnumSet<E> enumset,
@@ -262,7 +318,6 @@ public class ProtocolUtil {
     }
   }
 
-  // Taken from
   // https://github.com/Nan1t/NanoLimbo/blob/main/src/main/java/ua/nanit/limbo/protocol/ByteMessage.java#L219
   public static void writeNamelessCompoundTag(final @NotNull ByteBuf byteBuf, final @NotNull BinaryTag binaryTag) {
     try (final ByteBufOutputStream output = new ByteBufOutputStream(byteBuf)) {
@@ -311,9 +366,9 @@ public class ProtocolUtil {
     return ((high & 0xFF) << 15) | low;
   }
 
-  private void checkFrame(final boolean expression, final String message) {
+  private void checkState(final boolean expression, final String message) {
     if (!expression) {
-      throw new CorruptedFrameException(message);
+      throw DEBUG ? new DecoderException(message) : QuietDecoderException.INSTANCE;
     }
   }
 }

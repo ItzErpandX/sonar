@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,30 +31,35 @@ import xyz.jonesdev.sonar.api.SonarPlatform;
 import xyz.jonesdev.sonar.api.SonarSupplier;
 import xyz.jonesdev.sonar.api.command.subcommand.SubcommandRegistry;
 import xyz.jonesdev.sonar.api.config.SonarConfiguration;
-import xyz.jonesdev.sonar.api.controller.VerifiedPlayerController;
+import xyz.jonesdev.sonar.api.database.controller.VerifiedPlayerController;
+import xyz.jonesdev.sonar.api.notification.ActionBarNotificationHandler;
+import xyz.jonesdev.sonar.api.notification.ChatNotificationHandler;
 import xyz.jonesdev.sonar.api.statistics.SonarStatistics;
 import xyz.jonesdev.sonar.api.timer.SystemTimer;
-import xyz.jonesdev.sonar.api.verbose.Notification;
-import xyz.jonesdev.sonar.api.verbose.Verbose;
 import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPreparer;
+import xyz.jonesdev.sonar.common.fallback.ratelimit.CaffeineCacheRatelimiter;
+import xyz.jonesdev.sonar.common.fallback.ratelimit.NoopCacheRatelimiter;
 import xyz.jonesdev.sonar.common.service.SonarServiceManager;
 import xyz.jonesdev.sonar.common.statistics.GlobalSonarStatistics;
-import xyz.jonesdev.sonar.common.subcommands.*;
+import xyz.jonesdev.sonar.common.subcommand.*;
 import xyz.jonesdev.sonar.common.update.UpdateChecker;
+import xyz.jonesdev.sonar.common.util.ProtocolUtil;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 @RequiredArgsConstructor
 public abstract class SonarBootstrap<T> implements Sonar {
   private T plugin;
   @Setter
-  private Verbose verboseHandler;
+  private ActionBarNotificationHandler actionBarNotificationHandler;
   @Setter
-  private Notification notificationHandler;
+  private ChatNotificationHandler chatNotificationHandler;
   private SonarConfiguration config;
   private VerifiedPlayerController verifiedPlayerController;
+  private final LibraryManager libraryManager;
   private final SonarStatistics statistics;
   private final SonarPlatform platform;
   private final SubcommandRegistry subcommandRegistry;
@@ -66,6 +71,9 @@ public abstract class SonarBootstrap<T> implements Sonar {
                         final @NotNull LibraryManager libraryManager) {
     // Load all libraries before anything else
     LibraryLoader.loadLibraries(libraryManager, platform);
+    this.libraryManager = libraryManager;
+    // Check if Netty is up to date
+    ProtocolUtil.checkNettyVersion();
     // Set the Sonar API
     SonarSupplier.set(this);
     // Set the plugin instance
@@ -73,11 +81,11 @@ public abstract class SonarBootstrap<T> implements Sonar {
     this.platform = platform;
     // Load the rest of the components
     this.statistics = new GlobalSonarStatistics();
-    this.verboseHandler = new Verbose();
-    this.notificationHandler = new Notification();
+    this.actionBarNotificationHandler = new ActionBarNotificationHandler();
+    this.chatNotificationHandler = new ChatNotificationHandler();
     this.config = new SonarConfiguration(dataDirectory);
-    this.subcommandRegistry = new SubcommandRegistry();
     // Register all subcommands
+    this.subcommandRegistry = new SubcommandRegistry();
     this.subcommandRegistry.register(
       new BlacklistCommand(),
       new VerifiedCommand(),
@@ -146,15 +154,10 @@ public abstract class SonarBootstrap<T> implements Sonar {
     getLogger().info("Taking cached snapshots of all packets...");
     FallbackPreparer.prepare();
 
-    // Update ratelimiter caches
-    getFallback().getRatelimiter().setAttemptCache(Caffeine.newBuilder()
-      .expireAfterWrite(Duration.ofMillis(getConfig().getVerification().getReconnectDelay()))
-      .ticker(Ticker.systemTicker())
-      .build());
-    getFallback().getRatelimiter().setFailCountCache(Caffeine.newBuilder()
-      .expireAfterWrite(Duration.ofMillis(getConfig().getVerification().getRememberTime()))
-      .ticker(Ticker.systemTicker())
-      .build());
+    // Update ratelimiter cache
+    getFallback().setRatelimiter(getConfig().getVerification().getReconnectDelay() > 0L
+      ? new CaffeineCacheRatelimiter(getConfig().getVerification().getReconnectDelay(), TimeUnit.MILLISECONDS)
+      : NoopCacheRatelimiter.INSTANCE);
 
     // Update blacklist cache
     final long blacklistTime = getConfig().getVerification().getBlacklistTime();
@@ -180,7 +183,7 @@ public abstract class SonarBootstrap<T> implements Sonar {
       // Close the old connection first
       verifiedPlayerController.close();
     }
-    verifiedPlayerController = new VerifiedPlayerController();
+    verifiedPlayerController = new VerifiedPlayerController(libraryManager);
   }
 
   public final void shutdown() {

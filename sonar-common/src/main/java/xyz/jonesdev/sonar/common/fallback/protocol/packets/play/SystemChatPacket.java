@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 package xyz.jonesdev.sonar.common.fallback.protocol.packets.play;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.CorruptedFrameException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion;
 import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacket;
 import xyz.jonesdev.sonar.common.util.ComponentHolder;
+import xyz.jonesdev.sonar.common.util.exception.QuietDecoderException;
 
 import java.util.UUID;
 
@@ -83,18 +83,18 @@ public final class SystemChatPacket implements FallbackPacket {
           || saltLong == 0L) && signatureBytes.length == 0) {
           unsigned = true;
         } else {
-          throw new CorruptedFrameException("Invalid signature");
+          throw QuietDecoderException.INSTANCE;
         }
 
         final boolean signedPreview = byteBuf.readBoolean();
         if (signedPreview && unsigned) {
-          throw new CorruptedFrameException("Signature missing");
+          throw QuietDecoderException.INSTANCE;
         }
 
         if (protocolVersion.compareTo(MINECRAFT_1_19_1) >= 0) {
           final int size = readVarInt(byteBuf);
           if (size < 0 || size > 5) {
-            throw new CorruptedFrameException("Invalid previous messages");
+            throw QuietDecoderException.INSTANCE;
           }
 
           for (int i = 0; i < size; i++) {

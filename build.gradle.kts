@@ -14,7 +14,7 @@ allprojects {
   }
 
   apply(plugin = "java")
-  apply(plugin = "io.github.goooler.shadow")
+  apply(plugin = "com.gradleup.shadow")
 
   dependencies {
     compileOnly(rootProject.libs.lombok)
@@ -48,8 +48,8 @@ allprojects {
       relocate("com.github.benmanes.caffeine", "xyz.jonesdev.sonar.libs.caffeine")
       relocate("com.mysql", "xyz.jonesdev.sonar.libs.mysql")
       relocate("org.mariadb", "xyz.jonesdev.sonar.libs.mariadb")
-      relocate("xyz.jonesdev.capja", "xyz.jonesdev.sonar.libs.capja")
       relocate("org.h2", "xyz.jonesdev.sonar.libs.h2")
+      relocate("com.jhlabs", "xyz.jonesdev.sonar.libs.jhlabs")
 
       // Exclude unnecessary metadata information
       exclude("META-INF/*/**")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
-import static xyz.jonesdev.sonar.common.statistics.CachedBandwidthStatistics.INCOMING;
-import static xyz.jonesdev.sonar.common.statistics.CachedBandwidthStatistics.OUTGOING;
+import static xyz.jonesdev.sonar.common.statistics.BandwidthStatistics.INCOMING;
+import static xyz.jonesdev.sonar.common.statistics.BandwidthStatistics.OUTGOING;
 
 @ChannelHandler.Sharable
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

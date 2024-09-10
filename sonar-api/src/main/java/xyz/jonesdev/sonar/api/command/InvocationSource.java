@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -34,21 +33,10 @@ public final class InvocationSource {
   private final Predicate<String> permissionFunction;
 
   /**
-   * @return True, if {@link InvocationSource#uuid} is not null
-   * @apiNote This indicates a player as a player will always have a UUID
+   * @return true if {@link InvocationSource#uuid} is not null
    */
   public boolean isPlayer() {
     return uuid != null;
-  }
-
-  /**
-   * Sends a message to the command executor
-   *
-   * @apiNote We should probably use cached components...
-   * (See {@link InvocationSource#sendMessage(Component)})
-   */
-  public void sendMessage(final String legacy) {
-    sendMessage(MiniMessage.miniMessage().deserialize(legacy));
   }
 
   /**

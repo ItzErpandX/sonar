@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ public final class FallbackTimeoutHandler extends IdleStateHandler {
   }
 
   @Override
-  protected void channelIdle(final ChannelHandlerContext ctx,
+  protected void channelIdle(final @NotNull ChannelHandlerContext ctx,
                              final @NotNull IdleStateEvent idleStateEvent) throws Exception {
     // The netty (default) ReadTimeoutHandler would normally just throw an Exception
     // The default ReadTimeoutHandler does only check for the boolean 'closed' and

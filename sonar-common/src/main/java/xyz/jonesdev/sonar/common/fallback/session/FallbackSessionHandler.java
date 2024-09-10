@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,11 @@ package xyz.jonesdev.sonar.common.fallback.session;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import xyz.jonesdev.sonar.api.Sonar;
+import xyz.jonesdev.sonar.api.database.model.VerifiedPlayer;
 import xyz.jonesdev.sonar.api.event.impl.UserVerifySuccessEvent;
 import xyz.jonesdev.sonar.api.fallback.FallbackUser;
-import xyz.jonesdev.sonar.api.model.VerifiedPlayer;
+import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacketDecoder;
+import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacketEncoder;
 import xyz.jonesdev.sonar.common.fallback.protocol.FallbackPacketListener;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.ClientInformationPacket;
 import xyz.jonesdev.sonar.common.fallback.protocol.packets.play.PluginMessagePacket;
@@ -30,7 +32,6 @@ import xyz.jonesdev.sonar.common.statistics.GlobalSonarStatistics;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static xyz.jonesdev.sonar.api.fallback.protocol.ProtocolVersion.*;
@@ -43,42 +44,46 @@ import static xyz.jonesdev.sonar.common.util.ProtocolUtil.BRAND_CHANNEL_LEGACY;
 public abstract class FallbackSessionHandler implements FallbackPacketListener {
   protected final FallbackUser user;
   protected final String username;
-  protected final UUID uuid;
 
   protected static final Random RANDOM = new Random();
 
   protected void checkState(final boolean state, final String failReason) {
     // Fails the verification if the condition is not met
     if (!state) {
-      // Let the API know that the user has failed the verification
       user.fail(failReason);
     }
   }
 
   protected final void finishVerification() {
-    // Increment number of total successful verifications
     GlobalSonarStatistics.totalSuccessfulVerifications++;
 
     // Add verified player to the database
     Sonar.get().getVerifiedPlayerController().add(new VerifiedPlayer(
-      user.getInetAddress(), uuid, user.getLoginTimer().getStart()));
+      user.getInetAddress(), user.getOfflineUuid(), user.getLoginTimer().getStart()));
 
     // Call the VerifySuccessEvent for external API usage
     Sonar.get().getEventManager().publish(new UserVerifySuccessEvent(
-      username, uuid, user, user.getLoginTimer().delay()));
+      username, user.getOfflineUuid(), user, user.getLoginTimer().delay()));
 
     // If enabled, transfer the player back to the origin server.
     // This feature was introduced by Mojang in Minecraft version 1.20.5.
     if (transferToOrigin != null
       && user.getProtocolVersion().compareTo(MINECRAFT_1_20_5) >= 0) {
-      // Send the transfer packet to the player and close the channel
-      closeWith(user.getChannel(), user.getProtocolVersion(), transferToOrigin);
+      // Send the transfer packet to the player (and close the channel if on Java Edition)
+      if (user.isGeyser()) {
+        user.write(transferToOrigin);
+        // Make sure we cannot receive any more packets from the player
+        user.getPipeline().remove(FallbackPacketDecoder.class);
+        user.getPipeline().remove(FallbackPacketEncoder.class);
+      } else {
+        closeWith(user.getChannel(), user.getProtocolVersion(), transferToOrigin);
+      }
     } else {
       // Disconnect player with the verification success message
       user.disconnect(Sonar.get().getConfig().getVerification().getVerificationSuccess());
     }
 
-    Sonar.get().getFallback().getLogger().info(
+    Sonar.get().getLogger().info(
       Sonar.get().getConfig().getMessagesConfig().getString("verification.logs.successful")
         .replace("<username>", username)
         .replace("<time-taken>", user.getLoginTimer().toString()));
@@ -136,13 +141,13 @@ public abstract class FallbackSessionHandler implements FallbackPacketListener {
     checkState(!brand.equals("Vanilla"), "illegal client brand: " + brand);
     // Regex pattern for validating client brands
     final Pattern pattern = Sonar.get().getConfig().getVerification().getBrand().getValidRegex();
-    checkState(pattern.matcher(brand).matches(), "client brand does not match pattern");
+    checkState(pattern.matcher(brand).matches(), "client brand does not match pattern: " + brand);
   }
 
   protected final void validateClientLocale(final @NotNull String locale) {
     // Check the client locale by performing a simple regex check
     // that disallows non-ascii characters by default.
     final Pattern pattern = Sonar.get().getConfig().getVerification().getValidLocaleRegex();
-    checkState(pattern.matcher(locale).matches(), "client locale does not match pattern");
+    checkState(pattern.matcher(locale).matches(), "client locale does not match pattern: " + locale);
   }
 }

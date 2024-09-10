@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Sonar Contributors
+ * Copyright (C) 2024 Sonar Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,12 +35,9 @@ public final class SonarEventManager {
   private static final Collection<SonarEventListener> EVENT_LISTENERS = new Vector<>(0);
   private static final ExecutorService EVENT_SERVICE = Executors.newSingleThreadExecutor();
 
-  /**
-   * Publishes the given event to all listeners
-   */
   @ApiStatus.Internal
   public void publish(final @NotNull SonarEvent event) {
-    // Don't post a task if there are no listeners
+    // Don't post an event if there are no listeners
     if (EVENT_LISTENERS.isEmpty()) {
       return;
     }
@@ -61,11 +58,13 @@ public final class SonarEventManager {
    * Registers one (or more) event listeners
    *
    * @param listeners One (or more) listeners to register
-   * @see #unregisterListener(SonarEventListener...) Unregister an event listener
+   * @see #unregisterListener(SonarEventListener[]) Unregister an event listener
    */
   @SuppressWarnings("unused") // External API usage
-  public synchronized void registerListener(final @NotNull SonarEventListener... listeners) {
-    EVENT_LISTENERS.addAll(Arrays.asList(listeners));
+  public void registerListener(final @NotNull SonarEventListener... listeners) {
+    synchronized (EVENT_LISTENERS) {
+      EVENT_LISTENERS.addAll(Arrays.asList(listeners));
+    }
   }
 
   /**
@@ -73,10 +72,12 @@ public final class SonarEventManager {
    *
    * @param listeners One (or more) listeners to unregister
    * @apiNote This does not have any effect if the given listeners are not registered
-   * @see #registerListener(SonarEventListener...) Register an event listener
+   * @see #registerListener(SonarEventListener[]) Register an event listener
    */
   @SuppressWarnings("unused") // External API usage
-  public synchronized void unregisterListener(final @NotNull SonarEventListener... listeners) {
-    EVENT_LISTENERS.removeAll(Arrays.asList(listeners));
+  public void unregisterListener(final @NotNull SonarEventListener... listeners) {
+    synchronized (EVENT_LISTENERS) {
+      EVENT_LISTENERS.removeAll(Arrays.asList(listeners));
+    }
   }
 }
