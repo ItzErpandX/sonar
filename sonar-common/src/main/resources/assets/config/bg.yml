@@ -196,35 +196,35 @@ verification:
   log-connections: true
   # Трябва ли Sonar да регистрира нови опити за проверка по време на атаки?
   log-during-attack: false
-  # Should Sonar log every single movement/position change during verification?
-  # This is not recommended for production servers but can be helpful for spotting errors.
+  # Трябва ли Sonar да регистрира всяко едно движение/промяна на позиция по време на проверката?
+  # Това не се препоръчва за публични сървъри, но може да бъде полезно за откриване на грешки.
   debug-xyz-positions: false
-  # Should Sonar also check Geyser (Bedrock) players?
-  # This feature is experimental and might cause issues
-  # If this is disabled, Bedrock players will be skipped
+  # Трябва ли Sonar да проверява и Geyser (Bedrock) играчите?
+  # Тази функция е експериментална и може да причини проблеми
+  # Ако това е деактивирано, Bedrock играчите ще бъдат пропуснати
   check-geyser-players: true
-  # The time since the player stopped sending packets before disconnecting
-  # (This value represents the time in milliseconds: 1 second = 1000 milliseconds)
+  # Времето, откакто играчът е спрял да изпраща пакети, преди да прекъсне връзката
+  # (Тази стойност представлява времето в милисекунди: 1 секунда = 1000 милисекунди)
   read-timeout: 8000
-  # The time since the server stopped sending packets before disconnecting the player
-  # (This value represents the time in milliseconds: 1 second = 1000 milliseconds)
+  # Времето, откакто сървърът спря да изпраща пакети, преди да прекъсне връзката с играча
+  # (Тази стойност представлява времето в милисекунди: 1 секунда = 1000 милисекунди)
   write-timeout: 10000
-  # How long should a player wait before reconnecting during verification
-  # (This value represents the time in milliseconds: 1 second = 1000 milliseconds)
+  # Колко време трябва да чака играчът, преди да се свърже отново по време на проверка
+  # (Тази стойност представлява времето в милисекунди: 1 секунда = 1000 милисекунди)
   rejoin-delay: 8000
-  # How long should Sonar remember the number of failed verifications for a player?
-  # (This value represents the time in milliseconds: 1 second = 1000 milliseconds)
+  # Колко дълго Sonar трябва да помни броя на неуспешните проверки за играч?
+  # (Тази стойност представлява времето в милисекунди: 1 секунда = 1000 милисекунди)
   remember-time: 120000
-  # How long should an IP address be denied from logging in when failing the verification too often?
-  # (This value represents the time in milliseconds: 1 second = 1000 milliseconds)
+  # Колко дълго трябва да бъде отказано влизане на IP адрес, когато твърде често се проваля при проверка?
+  # (Тази стойност представлява времето в милисекунди: 1 секунда = 1000 милисекунди)
   blacklist-time: 600000
-  # How often does a player have to fail the verification in order to be blacklisted?
-  # (Set this value to 0 to disable the blacklist entirely)
+  # Колко често играчът трябва да не премине проверката, за да бъде в черния списък?
+  # (Задайте тази стойност на 0, за да деактивирате изцяло черния списък)
   blacklist-threshold: 2
-  # List of protocol IDs which are not checked by Sonar (verification bypass)
-  # You can find the full list of all protocol IDs here:
+  # Списък с идентификатори на протоколи, които не се проверяват от Sonar (пропускане на проверка)
+  # Можете да намерите пълния списък на всички идентификатори на протоколи тук:
   # https://wiki.vg/Protocol_version_numbers
-  # For example, Minecraft 1.20 has the ID 763.
+  # Например Minecraft 1.20 има ID 763.
   whitelisted-protocols: []
-  # List of protocol IDs which are unable to join the server at all
+  # Списък с идентификатори на протоколи, които изобщо няма да могат да се присъединят към сървъра
   blacklisted-protocols: []
